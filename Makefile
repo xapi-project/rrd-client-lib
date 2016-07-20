@@ -2,20 +2,20 @@
 #
 #
 
-CC 	= gcc
-CFLAGS 	=
-OBJ 	+= rrdlib.o
+CC	= gcc
+CFLAGS	=
+OBJ	+= librrd.o
 
 .PHONY: all
-all: 	librdd.a
+all:	librdd.a
 
 .PHONY: clean
 clean:
 	rm -f $(OBJ)
 	rm -f librdd.a
 
-%.o: 	%.c
-	$(CC) $(CFLAGS) -o $@ $<
+%.o:	%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 librdd.a: $(OBJ)
 	ar rc $@ $(OBJ)
