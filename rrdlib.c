@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Citrix Systems Inc.
+ * Copyright (C) 2016 Citrix Systems Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,6 +15,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <rrdlib.h>
+#include "rrdlib.h"
 
 /* Functions yet to be implemented */
