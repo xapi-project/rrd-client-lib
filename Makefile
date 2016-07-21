@@ -3,7 +3,7 @@
 #
 
 CC	= gcc
-CFLAGS	=
+CFLAGS	= -Wall
 OBJ	+= librrd.o
 
 .PHONY: all
@@ -13,6 +13,7 @@ all:	librdd.a
 clean:
 	rm -f $(OBJ)
 	rm -f librdd.a
+	rm -f librdd.o
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
