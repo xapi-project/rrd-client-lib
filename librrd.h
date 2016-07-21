@@ -1,24 +1,24 @@
 
 #define RRD_MAX_SOURCES		  128
 
-#define RDD_OK				  0
-#define RRD_TOO_MANY_SOURCES  1
+#define RDD_OK			  0
+#define RRD_TOO_MANY_SOURCES	  1
 #define RRD_NO_SOUCH_SOURCE	  2
-#define RRD_ERROR			  3
+#define RRD_ERROR		  3
 
 typedef enum { LOCAL_DOMAIN, INTER_DOMAIN } rrd_domain;
 typedef enum { GAUGE, ABSOLUTE, DERIVE } kind;
 typedef enum { HOST, VM, SR } owner;
 
 typedef struct rrd_source {
-	char *name;				/* name of the data source */
+	char *name;			/* name of the data source */
 	char *description;		/* for user interface */
 	owner owner;
 	char *owner_uuid;		/* UUID of the owner or NULL */
 	char *units;			/* for user interface */
 	kind value_type;		/* type of value */
-	float min;				/* min <= sample() <= max */
-	float max;				/* min <= sample() <= max */
+	float min;			/* min <= sample() <= max */
+	float max;			/* min <= sample() <= max */
 	float (*sample)();		/* reads value that gets reported */
 } RRD_SOURCE;
 
@@ -27,10 +27,10 @@ typedef struct rrd_source {
  */
 
 typedef struct rrd_plugin {
-	char *name;				/* name of the plugin */
+	char *name;			/* name of the plugin */
 	rrd_domain domain;		/* domain of this plugin */
 	RRD_SOURCE sources[RRD_MAX_SOURCES];
-	int dirty;				/* true if sources changed since last sample */
+	int dirty;			/* true if sources changed */
 } RRD_PLUGIN;
 
 

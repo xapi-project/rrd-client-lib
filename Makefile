@@ -7,18 +7,18 @@ CFLAGS	= -Wall
 OBJ	+= librrd.o
 
 .PHONY: all
-all:	librdd.a
+all:	librrd.a
 
 .PHONY: clean
 clean:
 	rm -f $(OBJ)
-	rm -f librdd.a
-	rm -f librdd.o
+	rm -f librrd.a
+	rm -f librrd.o
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-librdd.a: $(OBJ)
+librrd.a: $(OBJ)
 	ar rc $@ $(OBJ)
 	ranlib $@
 
