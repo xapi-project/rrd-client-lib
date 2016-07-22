@@ -11,6 +11,7 @@ service and to provide data sources. All data provided by the plugin is
 written periodically to a file from where it is read by the RRD daemon.
 
     <<librrd.h>>=
+    #include <stdint.h>
     <<constants>>
     <<type definitions>>
     <<function declarations>>
@@ -49,7 +50,7 @@ dynamically.
     
     typedef union {
             float   float64;
-            int     int64;
+            int64_t int64;
     } rrd_value;
     
     typedef struct rrd_source {
@@ -62,7 +63,7 @@ dynamically.
             type type;                      /* type of value */
             rrd_value min;                  /* min <= sample() <= max */
             rrd_value max;                  /* min <= sample() <= max */
-            rrd_value (*sample)();          /* reads value that gets reported */
+            rrd_value (*sample)(void);      /* reads value that gets reported */
     } RRD_SOURCE;
     
     <<typedef RRD_PLUGIN>>
@@ -100,6 +101,7 @@ Some functions return an error code.
             rrd_domain domain;              /* domain of this plugin */
             RRD_SOURCE sources[RRD_MAX_SOURCES];
             int dirty;                      /* true if sources changed */
+    	char *json;			/* meta data */
     } RRD_PLUGIN;
     
 

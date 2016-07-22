@@ -1,3 +1,4 @@
+#include <stdint.h>
 
 #define RRD_MAX_SOURCES		  128
 
@@ -16,7 +17,7 @@ typedef enum { FLOAT64, INT64 } type;
  */
 typedef union {
 	float   float64;
-	int	int64;
+	int64_t	int64;
 } rrd_value;
 
 /* An RRD_SOURCE describes the value being reported and contains a
@@ -32,7 +33,7 @@ typedef struct rrd_source {
 	type type;			/* type of value */
 	rrd_value min;			/* min <= sample() <= max */
 	rrd_value max;			/* min <= sample() <= max */
-	rrd_value (*sample)();		/* reads value that gets reported */
+	rrd_value (*sample)(void);	/* reads value that gets reported */
 } RRD_SOURCE;
 
 /* The RRD_PLUGIN below is private to the implementation and
@@ -43,6 +44,7 @@ typedef struct rrd_plugin {
 	rrd_domain domain;		/* domain of this plugin */
 	RRD_SOURCE sources[RRD_MAX_SOURCES];
 	int dirty;			/* true if sources changed */
+	char *json;			/* meta data */
 } RRD_PLUGIN;
 
 
