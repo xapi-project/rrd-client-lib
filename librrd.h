@@ -7,25 +7,37 @@
 #define RRD_ERROR		  3
 
 typedef enum { LOCAL_DOMAIN, INTER_DOMAIN } rrd_domain;
-typedef enum { GAUGE, ABSOLUTE, DERIVE } kind;
+typedef enum { GAUGE, ABSOLUTE, DERIVE } scale;
 typedef enum { HOST, VM, SR } owner;
+typedef enum { FLOAT64, INT64 } type;
 
+/* An RRD_SOURCE can report float or integer values - represented as
+ * a rrd_value. The type component tells which one it is.
+ */
+typedef union {
+	float   float64;
+	int	int64;
+} rrd_value;
+
+/* An RRD_SOURCE describes the value being reported and contains a
+ * sample() function to obtain such values.
+ */
 typedef struct rrd_source {
 	char *name;			/* name of the data source */
 	char *description;		/* for user interface */
 	owner owner;
 	char *owner_uuid;		/* UUID of the owner or NULL */
 	char *units;			/* for user interface */
-	kind value_type;		/* type of value */
-	float min;			/* min <= sample() <= max */
-	float max;			/* min <= sample() <= max */
-	float (*sample)();		/* reads value that gets reported */
+	scale scale ;			/* presentation of value */
+	type type;			/* type of value */
+	rrd_value min;			/* min <= sample() <= max */
+	rrd_value max;			/* min <= sample() <= max */
+	rrd_value (*sample)();		/* reads value that gets reported */
 } RRD_SOURCE;
 
-/* the type struct rrd_plugin below is private to the implementation and
+/* The RRD_PLUGIN below is private to the implementation and
  * entirely managed by it.
  */
-
 typedef struct rrd_plugin {
 	char *name;			/* name of the plugin */
 	rrd_domain domain;		/* domain of this plugin */
