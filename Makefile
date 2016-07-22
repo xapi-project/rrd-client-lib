@@ -22,4 +22,4 @@ librrd.a: $(OBJ)
 	ar rc $@ $(OBJ)
 	ranlib $@
 
-
+librrd.o: librrd.h
