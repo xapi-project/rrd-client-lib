@@ -1,38 +1,74 @@
-/* vim: set ts=8 sw=8 noet: */
+/*
+ *
+ * vim: set ts=4 sw=4 et: 
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <libgen.h>
+#include <assert.h>
+
+#include "librrd.h"
 #include "parson/parson.h"
 
-int main(int argc, char** argv)
+void
+read_src(JSON_Value * root)
 {
-  char *buf = NULL;
-  size_t buf_size;
+    JSON_Object    *ds;
+    JSON_Value     *d_;
+    JSON_Object    *d;
+    const char     *name;
 
-  JSON_Value *root_val = json_value_init_object();
-  JSON_Object *root = json_value_get_object(root_val);
+    assert(json_value_get_type(root) == JSONObject);
+    ds = json_object_get_object(json_value_get_object(root),
+                                "datasources");
+    assert(ds);
+    assert(json_object_get_count(ds) > 0);
 
-  JSON_Value *src_val = json_value_init_object();
-  JSON_Object *src = json_value_get_object(src_val);
-  json_object_set_string(src, "description", "The current time");
-  json_object_set_string(src, "owner", "host");
-  json_object_set_string(src, "value_type", "int64");
-  json_object_set_boolean(src, "default", 1);
-  json_object_set_string(src, "units", "seconds");
-  json_object_set_string(src, "min", "-inf");
-  json_object_set_string(src, "max", "inf");
-  json_object_set_value(root, "datasources", src_val);
+    name = json_object_get_name(ds, 0);
+    d_ = json_object_get_value_at(ds, 0);
+    assert(json_value_get_type(d_) == JSONObject);
+    d = json_value_get_object(d_);
+    assert(json_object_has_value_of_type(d, "description", JSONString));
+    assert(json_object_has_value_of_type(d, "owner", JSONString));
+    assert(json_object_has_value_of_type(d, "value_type", JSONString));
+    assert(json_object_has_value_of_type(d, "type", JSONString));
+    assert(json_object_has_value_of_type(d, "default", JSONBoolean));
+    assert(json_object_has_value_of_type(d, "units", JSONString));
+    assert(json_object_has_value_of_type(d, "min", JSONString));
+    assert(json_object_has_value_of_type(d, "max", JSONString));
+    assert(json_object_has_value_of_type(d, "values", JSONArray));
 
-  buf_size = json_serialization_size_pretty(root_val);
-  buf = malloc(buf_size);
-  if (!buf || !buf_size) {
-	  perror("can't allocate memory for JSON");
-	  exit(1);
-  }
-  json_serialize_to_buffer_pretty(root_val, buf, buf_size);
-  puts(buf);
-  free(buf);
+    printf("name = %s\n", name);
+}
 
-  json_value_free(root_val);
-  return 0;
+int
+main(int argc, char **argv)
+{
+    JSON_Value     *test = NULL;
+    char           *buf = NULL;
+    RRD_PLUGIN     *plugin;
+
+    if (argc != 2) {
+        fprintf(stderr, "usage: %s file.json\n", basename(argv[0]));
+        exit(1);
+    }
+    test = json_parse_file(argv[1]);
+    if (!test) {
+        fprintf(stderr, "can't parse %s\n as a JSON file", argv[1]);
+        exit(1);
+    }
+    buf = json_serialize_to_string_pretty(test);
+    puts(buf);
+    json_free_serialized_string(buf);
+
+    read_src(test);
+
+    plugin = rrd_open("rrdtest", LOCAL_DOMAIN, "rrdtest.rrd");
+    assert(plugin);
+    rrd_close(plugin);
+
+
+    json_value_free(test);
+    return 0;
 }
