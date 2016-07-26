@@ -2,7 +2,7 @@
 
 #define RRD_MAX_SOURCES		  128
 
-#define RDD_OK			  0
+#define RRD_OK			  0
 #define RRD_TOO_MANY_SOURCES	  1
 #define RRD_NO_SOUCH_SOURCE	  2
 #define RRD_ERROR		  3
