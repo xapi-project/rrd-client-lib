@@ -5,7 +5,8 @@
 #define RRD_OK			  0
 #define RRD_TOO_MANY_SOURCES	  1
 #define RRD_NO_SOUCH_SOURCE	  2
-#define RRD_ERROR		  3
+#define RRD_FILE_ERROR		  3
+#define RRD_ERROR		  4
 
 typedef enum { LOCAL_DOMAIN, INTER_DOMAIN } rrd_domain;
 typedef enum { GAUGE, ABSOLUTE, DERIVE } scale;
@@ -41,8 +42,9 @@ typedef struct rrd_source {
  */
 typedef struct rrd_plugin {
 	char *name;			/* name of the plugin */
-	rrd_domain domain;		/* domain of this plugin */
-	RRD_SOURCE sources[RRD_MAX_SOURCES];
+	int file;			/* where we report data */
+	rrd_domain domain;		/* domain of this plugin */ 
+	RRD_SOURCE *sources[RRD_MAX_SOURCES];
 	int dirty;			/* true if sources changed */
 	char *json;			/* meta data */
 } RRD_PLUGIN;
