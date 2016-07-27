@@ -1,5 +1,5 @@
 /*
- * vim: set ts=8 sw=8 noet: 
+ * vim: set ts=8 sw=8 noet:
  */
 
 
@@ -25,24 +25,87 @@ struct rrd_header {
     int32_t         rrd_header_datasources;
     int64_t         rrd_timestamp;
 } __attribute__ ((packed)) __;
-
 typedef struct rrd_header RRD_HEADER;
 
-static          size_t
-rrd_buffer_size_source(RRD_SOURCE * source)
+static JSON_Value *
+json_for_source(RRD_SOURCE * source)
 {
-    return 0;
+    assert(source);
+
+    JSON_Value     *value = json_value_init_object();
+    JSON_Object    *src = json_value_get_object(value);
+
+    json_object_set_string(src, "description", source->description);
+    json_object_set_string(src, "units", source->rrd_units);
+    json_object_set_string(src, "min", source->min);
+    json_object_set_string(src, "max", source->max);
+
+    char           *owner = NULL;
+    switch (source->owner) {
+    case RRD_HOST:
+        owner = "host";
+        break;
+    case RRD_VM:
+        owner = "vm";
+        break;
+    case RRD_SR:
+        owner = "rrd";
+        break;
+    default:
+        assert(0);
+    }
+    json_object_set_string(src, "owner", owner);
+
+    char           *value_type = NULL;
+    switch (source->type) {
+    case RRD_INT64:
+        value_type = "int64";
+        break;
+    case RRD_FLOAT64:
+        value_type = "float";
+        break;
+    default:
+        assert(0);
+    }
+    json_object_set_string(src, "value_type", value_type);
+
+
+    char           *scale = NULL;
+    switch (source->scale) {
+    case RRD_GAUGE:
+        scale = "gauge";
+        break;
+    case RRD_ABSOLUTE:
+        scale = "absolute";
+        break;
+    case RRD_DERIVE:
+        scale = "derive";
+        break;
+    default:
+        assert(0);
+    }
+    json_object_set_string(src, "type", scale);
+
+    char           *pretty;
+    pretty = json_serialize_to_string_pretty(value);
+    puts(pretty);
+    json_free_serialized_string(pretty);
+
+    return value;
 }
 
-static          size_t
-rrd_buffer_size(RRD_PLUGIN * plugin)
+static JSON_Value *
+json_for_plugin(RRD_PLUGIN *plugin)
 {
     assert(plugin);
 
-    size_t          size = 0;
+    JSON_Value     *value = json_value_init_object();
+    JSON_Object    *src = json_value_get_object(value);
 
-    return 0;
+
 }
+
+
 
 RRD_PLUGIN     *
 rrd_open(char *name, rrd_domain domain, char *path)
@@ -63,6 +126,7 @@ rrd_open(char *name, rrd_domain domain, char *path)
         plugin->sources[i] = (RRD_SOURCE *) NULL;
     }
     plugin->dirty = 1;
+    plugin->n = 0;
 
     plugin->file = open(path, O_WRONLY | O_CREAT);
     if (!plugin->file) {
@@ -78,9 +142,6 @@ rrd_close(RRD_PLUGIN * plugin)
 {
     assert(plugin);
 
-    for (int i = 0; i < RRD_MAX_SOURCES; i++) {
-        free(plugin->sources[i]);
-    }
     if (close(plugin->file) != 0) {
         perror("rrd_close");
         exit(RRD_FILE_ERROR);
@@ -94,6 +155,20 @@ rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
     assert(plugin);
     assert(source);
 
+    /*
+     * find free slot 
+     */
+    size_t          i = 0;
+    while (plugin->sources[i] != NULL && i < RRD_MAX_SOURCES)
+        i++;
+    if (i >= RRD_MAX_SOURCES) {
+        return RRD_TOO_MANY_SOURCES;
+    }
+    plugin->sources[i] = source;
+    plugin->dirty = 1;
+    plugin->n++;
+
+    json_for_source(source);
     return RRD_OK;
 }
 
@@ -101,13 +176,32 @@ int
 rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
 {
     assert(source);
+    size_t          i = 0;
+    /*
+     * find source in plugin 
+     */
+    while (i < RRD_MAX_SOURCES && plugin->sources[i] != source)
+        i++;
+    if (i >= RRD_MAX_SOURCES) {
+        return RRD_NO_SOUCH_SOURCE;
+    }
+    plugin->sources[i] = NULL;
+    plugin->dirty = 1;
+    plugin->n--;
     return RRD_OK;
 }
+
 
 int
 rrd_sample(RRD_PLUGIN * plugin)
 {
     assert(plugin);
 
-    return RRD_OK;
+    size_t          i;
+
+    for (i = 0; i < RRD_MAX_SOURCES; i++) {
+        if (plugin->sources[i]) {
+            plugin->sources[i]->sample();
+        }
+    }
 }

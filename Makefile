@@ -3,7 +3,7 @@
 #
 
 CC	= gcc
-CFLAGS	= -Wall
+CFLAGS	= -g -Wall
 OBJ	+= librrd.o
 OBJ 	+= parson/parson.o
 
@@ -32,6 +32,6 @@ librrd.a: $(OBJ)
 rrdtest: rrdtest.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^
 
-librrd.o: librrd.h 
+librrd.o: librrd.h
 parson/parson.o: parson/parson.h
 rrdtest.o: librrd.h parson/parson.h
