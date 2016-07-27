@@ -20,7 +20,7 @@ sample(void)
     return v;
 }
 
-static RRD_SOURCE src[1];
+static RRD_SOURCE src[2];
 
 int
 main(int argc, char **argv)
@@ -35,7 +35,7 @@ main(int argc, char **argv)
     plugin = rrd_open("rrdtest", RRD_LOCAL_DOMAIN, "rrdtest.rrd");
     assert(plugin);
 
-    src[0].name = "name";
+    src[0].name = "first";
     src[0].description = "description";
     src[0].owner = RRD_HOST;
     src[0].owner_uuid = "4cc1f2e0-5405-11e6-8c2f-572fc76ac144";
@@ -47,7 +47,21 @@ main(int argc, char **argv)
 
     rrd_add_src(plugin, &src[0]);
     rrd_sample(plugin);
+
+    src[1].name = "second";
+    src[1].description = "description";
+    src[1].owner = RRD_HOST;
+    src[1].owner_uuid = "e8969702-5414-11e6-8cf5-47824be728c3";
+    src[1].rrd_units = "points";
+    src[1].scale = RRD_GAUGE;
+    src[1].min = "-inf";
+    src[1].max = "inf";
+    src[1].sample = sample;
+    rrd_add_src(plugin, &src[1]);
+    rrd_sample(plugin);
+
     rrd_del_src(plugin, &src[0]);
+    rrd_sample(plugin);
 
     rrd_close(plugin);
     return 0;

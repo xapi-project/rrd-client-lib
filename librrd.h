@@ -1,12 +1,12 @@
 #include <stdint.h>
 
-#define RRD_MAX_SOURCES		  128
+#define RRD_MAX_SOURCES         128
 
-#define RRD_OK									0
-#define RRD_TOO_MANY_SOURCES	  1
-#define RRD_NO_SOUCH_SOURCE			2
-#define RRD_FILE_ERROR					3
-#define RRD_ERROR								4
+#define RRD_OK                  0
+#define RRD_TOO_MANY_SOURCES    1
+#define RRD_NO_SOUCH_SOURCE     2
+#define RRD_FILE_ERROR          3
+#define RRD_ERROR               4
 
 typedef enum { RRD_LOCAL_DOMAIN = 0, RRD_INTER_DOMAIN } rrd_domain;
 typedef enum { RRD_GAUGE = 0, RRD_ABSOLUTE, RRD_DERIVE } rrd_scale;
@@ -34,9 +34,9 @@ typedef struct rrd_source {
     char           *rrd_units;  /* for user interface */
     rrd_scale       scale;      /* presentation of value */
     rrd_type        type;       /* type of value */
-    char					  *min;       /* min <= sample() <= max */
-    char						*max;       /* min <= sample() <= max */
-    rrd_value				(*sample)(void);  /* reads value that gets
+    char           *min;        /* min <= sample() <= max */
+    char           *max;        /* min <= sample() <= max */
+                    rrd_value(*sample) (void);  /* reads value that gets * 
                                                  * reported */
 } RRD_SOURCE;
 
@@ -49,11 +49,18 @@ typedef struct rrd_plugin {
     int             file;       /* where we report data */
     rrd_domain      domain;     /* domain of this plugin */
     RRD_SOURCE     *sources[RRD_MAX_SOURCES];
-		int							n;					/* number of used slots */
+    int             n;          /* number of used slots */
     int             dirty;      /* true if sources changed */
     char           *json;       /* meta data */
 } RRD_PLUGIN;
 
+
+/*
+ * Memory management policy: the library does not free the memory of any
+ * objects that are passed into it (like strings or RRD_SOURCE objects).
+ * It does free any memory that it allocates internally when calling
+ * rrd_close().
+ */
 
 /*
  * rrd_open - regsiter a new plugin
@@ -66,7 +73,7 @@ typedef struct rrd_plugin {
 RRD_PLUGIN     *rrd_open(char *name, rrd_domain domain, char *path);
 
 /*
- * rrd_close - close a plugin
+ * rrd_close - close a plugin.
  */
 int             rrd_close(RRD_PLUGIN * plugin);
 
@@ -78,7 +85,7 @@ int             rrd_close(RRD_PLUGIN * plugin);
 int             rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
 
 /*
- * rrd_del_src - remove a data source returns: error code 
+ * rrd_del_src - remove a data source
  */
 int             rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
 

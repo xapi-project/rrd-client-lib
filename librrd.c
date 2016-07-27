@@ -1,5 +1,5 @@
 /*
- * vim: set ts=8 sw=8 noet:
+ * vim: set ts=4 sw=4 noet: 
  */
 
 
@@ -32,8 +32,8 @@ json_for_source(RRD_SOURCE * source)
 {
     assert(source);
 
-    JSON_Value     *value = json_value_init_object();
-    JSON_Object    *src = json_value_get_object(value);
+    JSON_Value     *json = json_value_init_object();
+    JSON_Object    *src = json_value_get_object(json);
 
     json_object_set_string(src, "description", source->description);
     json_object_set_string(src, "units", source->rrd_units);
@@ -86,23 +86,32 @@ json_for_source(RRD_SOURCE * source)
     }
     json_object_set_string(src, "type", scale);
 
-    char           *pretty;
-    pretty = json_serialize_to_string_pretty(value);
-    puts(pretty);
-    json_free_serialized_string(pretty);
-
-    return value;
+    return json;
 }
 
 static JSON_Value *
-json_for_plugin(RRD_PLUGIN *plugin)
+json_for_plugin(RRD_PLUGIN * plugin)
 {
     assert(plugin);
 
-    JSON_Value     *value = json_value_init_object();
-    JSON_Object    *src = json_value_get_object(value);
+    JSON_Value     *json = json_value_init_object();
+    JSON_Object    *root = json_value_get_object(json);
 
+    size_t          i;
+    for (i = 0; i < RRD_MAX_SOURCES; i++) {
+        JSON_Value     *src;
+        if (plugin->sources[i] == NULL)
+            continue;
+        src = json_for_source(plugin->sources[i]);
+        json_object_set_value(root, plugin->sources[i]->name, src);
+    }
 
+    char           *pretty;
+    pretty = json_serialize_to_string_pretty(json);
+    puts(pretty);
+    json_free_serialized_string(pretty);
+
+    return json;
 }
 
 
@@ -146,6 +155,8 @@ rrd_close(RRD_PLUGIN * plugin)
         perror("rrd_close");
         exit(RRD_FILE_ERROR);
     }
+
+    assert(plugin->n == 0);
     return RRD_OK;
 }
 
@@ -156,7 +167,7 @@ rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
     assert(source);
 
     /*
-     * find free slot 
+     * find free slot
      */
     size_t          i = 0;
     while (plugin->sources[i] != NULL && i < RRD_MAX_SOURCES)
@@ -178,7 +189,7 @@ rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
     assert(source);
     size_t          i = 0;
     /*
-     * find source in plugin 
+     * find source in plugin
      */
     while (i < RRD_MAX_SOURCES && plugin->sources[i] != source)
         i++;
@@ -196,12 +207,16 @@ int
 rrd_sample(RRD_PLUGIN * plugin)
 {
     assert(plugin);
+    JSON_Value     *json;
 
-    size_t          i;
+    json = json_for_plugin(plugin);
+    json_value_free(json);
 
-    for (i = 0; i < RRD_MAX_SOURCES; i++) {
-        if (plugin->sources[i]) {
-            plugin->sources[i]->sample();
-        }
+
+    for (size_t i = 0; i < RRD_MAX_SOURCES; i++) {
+        if (plugin->sources[i] == NULL)
+            continue;
+        plugin->sources[i]->sample();
     }
+    return RRD_OK;
 }

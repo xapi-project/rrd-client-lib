@@ -19,6 +19,10 @@ clean:
 	rm -f rrdtest.o
 	rm -f rrdtest
 
+.PHONY: indent
+indent: librrd.h librrd.c rrdtest.c
+	indent -orig -nut $^
+
 parson:
 	git submodule add https://github.com/kgabis/parson.git
 
