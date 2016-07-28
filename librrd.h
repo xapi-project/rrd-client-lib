@@ -50,7 +50,7 @@ typedef struct rrd_plugin {
     int             file;       /* where we report data */
     rrd_domain      domain;     /* domain of this plugin */
     RRD_SOURCE     *sources[RRD_MAX_SOURCES];
-    int32_t         n;          /* number of used slots */
+    uint32_t        n;          /* number of used slots */
     char           *json;       /* meta data */
     char           *buf;        /* buffer where we keep protocol data */
     size_t          buf_size;   /* size of the buffer */

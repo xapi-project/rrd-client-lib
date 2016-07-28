@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <zlib.h>
+#include <time.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -22,10 +23,10 @@
 
 struct rrd_header {
     char            rrd_magic[MAGIC_SIZE];
-    int32_t         rrd_checksum_value;
-    int32_t         rrd_checksum_meta;
-    int32_t         rrd_header_datasources;
-    int64_t         rrd_timestamp;
+    uint32_t        rrd_checksum_value;
+    uint32_t        rrd_checksum_meta;
+    uint32_t        rrd_header_datasources;
+    uint64_t        rrd_timestamp;
 } __attribute__ ((packed)) __;
 typedef struct rrd_header RRD_HEADER;
 
@@ -33,8 +34,8 @@ uint64_t
 htonll(const uint64_t in)
 {
     unsigned char   out[8] =
-        { in >> 56, in >> 48, in >> 40, in >> 32, in >> 24, in >> 16,
-in >> 8, in };
+        { in >> 56, in >> 48, in >> 40, in >> 32,
+          in >> 24, in >> 16, in >>  8, in };
     return *(uint64_t *) out;
 }
 
@@ -48,7 +49,6 @@ invalidate(RRD_PLUGIN * plugin)
     plugin->buf_size = 0;
     json_value_free(plugin->meta);
     plugin->meta = NULL;
-
 }
 
 static JSON_Value *
@@ -120,24 +120,14 @@ json_for_plugin(RRD_PLUGIN * plugin)
 
     JSON_Value     *json = json_value_init_object();
     JSON_Object    *root = json_value_get_object(json);
+    JSON_Value     *src;
 
-    size_t          i;
-    for (i = 0; i < RRD_MAX_SOURCES; i++) {
-        JSON_Value     *src;
+    for (size_t i = 0; i < RRD_MAX_SOURCES; i++) {
         if (plugin->sources[i] == NULL)
             continue;
         src = json_for_source(plugin->sources[i]);
         json_object_set_value(root, plugin->sources[i]->name, src);
     }
-
-#if 0
-    char           *pretty;
-    pretty = json_serialize_to_string_pretty(json);
-    puts(pretty);
-    json_free_serialized_string(pretty);
-
-#endif
-
     return json;
 }
 
@@ -146,10 +136,10 @@ initialise(RRD_PLUGIN * plugin)
 {
 
     RRD_HEADER     *header;
-    int32_t         size_meta;
-    int32_t         size_total;
-    int64_t         *p64;
-    int32_t         *p32;
+    uint32_t        size_meta;
+    uint32_t        size_total;
+    int64_t        *p64;
+    int32_t        *p32;
 
     assert(plugin);
     assert(plugin->meta == NULL);
@@ -161,7 +151,7 @@ initialise(RRD_PLUGIN * plugin)
     size_total = 0;
     size_total += sizeof(RRD_HEADER);
     size_total += plugin->n * sizeof(int64_t);
-    size_total += sizeof(int32_t);
+    size_total += sizeof(uint32_t);
     size_total += size_meta;
 
     plugin->buf_size = size_total;
@@ -172,30 +162,33 @@ initialise(RRD_PLUGIN * plugin)
     }
 
     /*
-     * all values are in network byte order 
+     * all values need to be in network byte order
      */
     header = (RRD_HEADER *) plugin->buf;
     memcpy(&header->rrd_magic, MAGIC, MAGIC_SIZE);
-    header->rrd_checksum_value = htonl(0x0123);
-    header->rrd_checksum_meta = htonl(0x4567);
+    header->rrd_checksum_value = htonl(0x01234567);
     header->rrd_header_datasources = htonl(plugin->n);
-    header->rrd_timestamp = 0;
+    header->rrd_timestamp = htonll((uint64_t) time(NULL));
 
-    p64 = (int64_t*) (plugin->buf + sizeof(RRD_HEADER));
+    p64 = (int64_t *) (plugin->buf + sizeof(RRD_HEADER));
     for (size_t i = 0; i < plugin->n; i++) {
-        *p64++ = htonll(0x8888);
+        *p64++ = htonll(0x001122334455667788);
     }
-    p32 = (int32_t*) p64;
+    p32 = (int32_t *) p64;
     *p32++ = htonl(size_meta);
 
     printf("slots         = %d\n", plugin->n);
     printf("fixed header  = %ld\n", sizeof(RRD_HEADER));
-    printf("binary header = %ld\n", ((char*)p32)-plugin->buf);
+    printf("binary header = %ld\n", ((char *) p32) - plugin->buf);
     printf("size_total    = %d\n", size_total);
     printf("size_meta     = %d\n", size_meta);
 
-    json_serialize_to_buffer_pretty(plugin->meta, (char*) p32, size_meta);
+    json_serialize_to_buffer_pretty(plugin->meta, (char *) p32, size_meta);
 
+    uint32_t        crc;
+    crc = crc32(0L, Z_NULL, 0);
+    crc = crc32(crc, (unsigned char *) p32, size_meta);
+    header->rrd_checksum_meta = htonl(crc);
 }
 
 RRD_PLUGIN     *
@@ -221,8 +214,7 @@ rrd_open(char *name, rrd_domain domain, char *path)
     plugin->buf = NULL;
     plugin->meta = NULL;
 
-    plugin->file = open(path, O_RDWR | O_CREAT | O_APPEND,
-            S_IRUSR|S_IWUSR);
+    plugin->file = open(path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
     if (!plugin->file) {
         perror("rrd_open");
         exit(RRD_FILE_ERROR);
@@ -295,6 +287,8 @@ rrd_sample(RRD_PLUGIN * plugin)
     assert(plugin);
     JSON_Value     *json;
     int n = 0;
+    int64_t *p;
+    RRD_HEADER *header;
 
     json = json_for_plugin(plugin);
     json_value_free(json);
@@ -302,18 +296,31 @@ rrd_sample(RRD_PLUGIN * plugin)
     if (plugin->buf == NULL) {
         initialise(plugin);
     }
+    assert(plugin->buf);
+    header = (RRD_HEADER*) plugin->buf;
 
+    /* sample n sources and write values to buffer */
+    p = (int64_t*)(plugin->buf + sizeof(RRD_HEADER));
     for (size_t i = 0; i < RRD_MAX_SOURCES; i++) {
         if (plugin->sources[i] == NULL)
             continue;
+        rrd_value v = plugin->sources[i]->sample();
+        *p++ = htonll((uint64_t)v.int64);
         n++;
-        plugin->sources[i]->sample();
     }
-    /* must have exactly n data sources */
+    /* must have sampled exactly n data sources */
     assert (n == plugin->n);
 
+    /* update timestamp, calculate crc */
+    header->rrd_timestamp = htonll((uint64_t)time(NULL));
+    uint32_t crc = crc32(0L, Z_NULL, 0);
+    crc = crc32(crc,
+            (unsigned char*) &header->rrd_timestamp,
+            (n+1)*sizeof(int64_t));
+    header->rrd_checksum_value = htonl(crc);
+
     /* write out buffer */
-    int             written = 0;
+    ssize_t             written = 0;
     while (written >= 0 && written < plugin->buf_size)
         written += write(plugin->file,
                          plugin->buf + written,

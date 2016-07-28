@@ -6,6 +6,7 @@ CC	= gcc
 CFLAGS	= -g -Wall
 OBJ	+= librrd.o
 OBJ 	+= parson/parson.o
+LIB     += -lz
 
 .PHONY: all
 all:	librrd.a rrdtest
@@ -31,6 +32,10 @@ valgrind: rrdtest
 indent: librrd.h librrd.c rrdtest.c
 	indent -orig -nut $^
 
+.PHONE: depend
+depend: librrd.c rrdtest.c
+	$(CC) -MM $^
+
 parson:
 	git submodule add https://github.com/kgabis/parson.git
 
@@ -42,8 +47,8 @@ librrd.a: $(OBJ)
 	ranlib $@
 
 rrdtest: rrdtest.o librrd.a
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
 
-librrd.o: librrd.h
-parson/parson.o: parson/parson.h
-rrdtest.o: librrd.h parson/parson.h
+parson/parson.o: 	parson/parson.h
+rrdtest.o: 		parson/parson.h librrd.h
+librrd.o: 		parson/parson.h librrd.h
