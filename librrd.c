@@ -157,6 +157,7 @@ rrd_close(RRD_PLUGIN * plugin)
     }
 
     assert(plugin->n == 0);
+	free(plugin);
     return RRD_OK;
 }
 
@@ -179,7 +180,6 @@ rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
     plugin->dirty = 1;
     plugin->n++;
 
-    json_for_source(source);
     return RRD_OK;
 }
 

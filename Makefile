@@ -19,6 +19,14 @@ clean:
 	rm -f rrdtest.o
 	rm -f rrdtest
 
+.PHONY: test
+test: 	rrdtest
+	./rrdtest
+
+.PHONY: valgrind
+valgrind: rrdtest
+	valgrind --leak-check=yes ./rrdtest
+
 .PHONY: indent
 indent: librrd.h librrd.c rrdtest.c
 	indent -orig -nut $^

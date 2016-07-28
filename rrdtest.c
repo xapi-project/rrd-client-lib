@@ -10,13 +10,20 @@
 
 #include "librrd.h"
 
+
+static int64_t  numbers[] =
+    { 2, 16, 28, 29, 29, 34, 40, 48, 49, 52, 54, 55, 55, 57, 66, 67, 83,
+      85, 90, 97 };
+
 static          rrd_value
 sample(void)
 {
     rrd_value       v;
-    v.int64 = 0;
+    static size_t   i = 0;
 
-    printf("sample called\n");
+    v.int64 = numbers[i++ % (sizeof(numbers) / sizeof(numbers[0]))];
+
+    printf("sample called: %ld\n", v.int64);
     return v;
 }
 
@@ -63,6 +70,7 @@ main(int argc, char **argv)
     rrd_del_src(plugin, &src[0]);
     rrd_sample(plugin);
 
+    rrd_del_src(plugin, &src[1]);
     rrd_close(plugin);
     return 0;
 }
