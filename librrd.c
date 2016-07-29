@@ -34,6 +34,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <arpa/inet.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "librrd.h"
 #include "parson/parson.h"
@@ -46,6 +48,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define htonll(x) htobe64(x)
 #endif
 
+/* The struct represents the first 31 bytes in the protocol header.
+ * Fields are not 4-byte or 8-byte aligned which is why we need the
+ * packed attribute.
+ */
 struct rrd_header {
     char            rrd_magic[MAGIC_SIZE];
     uint32_t        rrd_checksum_value;
@@ -55,6 +61,9 @@ struct rrd_header {
 } __attribute__ ((packed));
 typedef struct rrd_header RRD_HEADER;
 
+/* invalidate the current buffer by removing it. It will be re-created
+ * by sample().
+ */
 static void
 invalidate(RRD_PLUGIN * plugin)
 {
@@ -67,6 +76,9 @@ invalidate(RRD_PLUGIN * plugin)
     plugin->meta = NULL;
 }
 
+/* Generate JSON for a data source and return it as an JSON object (from
+ * where it can be rendered to a string.
+ */
 static JSON_Value *
 json_for_source(RRD_SOURCE * source)
 {
@@ -130,6 +142,9 @@ json_for_source(RRD_SOURCE * source)
     return json;
 }
 
+/* Generate JSON for a plugin. This is just a JSON object containing a
+ * sub-objecy for every data source.
+ */
 static JSON_Value *
 json_for_plugin(RRD_PLUGIN * plugin)
 {
@@ -148,6 +163,9 @@ json_for_plugin(RRD_PLUGIN * plugin)
     return json;
 }
 
+/* initialise the buffer that we update and write out to a file. Once
+ * initialised, it is kept up to date by sample().
+ */
 static void
 initialise(RRD_PLUGIN * plugin)
 {
@@ -174,6 +192,7 @@ initialise(RRD_PLUGIN * plugin)
     plugin->buf_size = size_total;
     plugin->buf = malloc(size_total);
     if (!plugin->buf) {
+        /* fatal */
         perror("buffer_init");
         exit(1);
     }
@@ -193,13 +212,6 @@ initialise(RRD_PLUGIN * plugin)
     }
     p32 = (int32_t *) p64;
     *p32++ = htonl(size_meta);
-
-    printf("slots         = %d\n", plugin->n);
-    printf("fixed header  = %ld\n", sizeof(RRD_HEADER));
-    printf("binary header = %ld\n", ((char *) p32) - plugin->buf);
-    printf("size_total    = %d\n", size_total);
-    printf("size_meta     = %d\n", size_meta);
-
     json_serialize_to_buffer_pretty(plugin->meta, (char *) p32, size_meta);
 
     uint32_t        crc;
@@ -208,6 +220,10 @@ initialise(RRD_PLUGIN * plugin)
     header->rrd_checksum_meta = htonl(crc);
 }
 
+/* rrd_open creates the data structure that represents a plugin with
+ * initially no data source. Data sources will be added later by
+ * rrd_add_src.
+ */
 RRD_PLUGIN     *
 rrd_open(char *name, rrd_domain domain, char *path)
 {
@@ -216,37 +232,40 @@ rrd_open(char *name, rrd_domain domain, char *path)
 
     RRD_PLUGIN     *plugin = (RRD_PLUGIN *) malloc(sizeof(RRD_PLUGIN));
     if (!plugin) {
-        perror("rrd_open");
-        exit(RRD_ERROR);
+        return NULL;
     }
 
     plugin->name = name;
     plugin->domain = domain;
+    /* mark all slots for data sources as free */
     for (int i = 0; i < RRD_MAX_SOURCES; i++) {
         plugin->sources[i] = (RRD_SOURCE *) NULL;
     }
     plugin->n = 0;
     plugin->buf_size = 0;
-    plugin->buf = NULL;
+    plugin->buf = NULL; /* will be initialised by sample() */
     plugin->meta = NULL;
 
     plugin->file = open(path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
     if (!plugin->file) {
-        perror("rrd_open");
-        exit(RRD_FILE_ERROR);
+        free(plugin);
+        return NULL;
     }
 
     return plugin;
 }
 
+/* unregister a plugin. Free all resources that we have allocted. Note
+ * that calling free(NULL) is fine in case some resource was already
+ * de-allocated.
+ */
 int
 rrd_close(RRD_PLUGIN * plugin)
 {
     assert(plugin);
 
     if (close(plugin->file) != 0) {
-        perror("rrd_close");
-        exit(RRD_FILE_ERROR);
+        return RRD_FILE_ERROR;
     }
     json_value_free(plugin->meta);
     free(plugin->buf);
@@ -254,6 +273,9 @@ rrd_close(RRD_PLUGIN * plugin)
     return RRD_OK;
 }
 
+/* Add a new data source to a plugin. It is inserted into the first free
+ * slot available.
+ */
 int
 rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
 {
@@ -276,6 +298,8 @@ rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
     return RRD_OK;
 }
 
+/* Remove a previously registered data source from a plugin,
+ */
 int
 rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
 {
@@ -296,7 +320,13 @@ rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
     return RRD_OK;
 }
 
-
+/* Sample obains a values form all data sources by calling their sample
+ * functions. It updates the buffer with all data and writes it out.
+ *
+ * If there is no buffer it means it was invalidated previously because
+ * a data source was added or removed. In that case in creates a new
+ * buffer first.
+ */
 int
 rrd_sample(RRD_PLUGIN * plugin)
 {
@@ -335,15 +365,20 @@ rrd_sample(RRD_PLUGIN * plugin)
             (n+1)*sizeof(int64_t));
     header->rrd_checksum_value = htonl(crc);
 
-    /* write out buffer */
-    ssize_t             written = 0;
-    while (written >= 0 && written < plugin->buf_size)
-        written += write(plugin->file,
-                         plugin->buf + written,
-                         plugin->buf_size - written);
-    if (written < 0) {
-        perror("rrd_sample");
+    /* reset file pointer, write out buffer */
+    if (lseek(plugin->file, 0, SEEK_SET) < 0) {
         return RRD_FILE_ERROR;
+    }
+    ssize_t             written;
+    ssize_t             remaining = plugin->buf_size;
+    char               *buf = plugin->buf;
+    while (remaining > 0) {
+        written=write(plugin->file, buf, remaining);
+        if (written < 0) {
+          return RRD_FILE_ERROR;
+        }
+        remaining -= written;
+        buf += written;
     }
 
     return RRD_OK;

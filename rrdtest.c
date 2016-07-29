@@ -58,6 +58,7 @@ int
 main(int argc, char **argv)
 {
     RRD_PLUGIN     *plugin;
+    int             rc;
 
     if (argc != 1) {
         fprintf(stderr, "usage: %s\n", basename(argv[0]));
@@ -78,8 +79,10 @@ main(int argc, char **argv)
     src[0].rrd_default = 1;
     src[0].sample = sample;
 
+    printf("adding source: %s\n", src[0].name);
     rrd_add_src(plugin, &src[0]);
-    rrd_sample(plugin);
+    rc = rrd_sample(plugin);
+    assert(rc == RRD_OK);
 
     src[1].name = "second";
     src[1].description = "description";
@@ -91,12 +94,18 @@ main(int argc, char **argv)
     src[1].max = "inf";
     src[1].rrd_default = 1;
     src[1].sample = sample;
+
+    printf("adding source: %s\n", src[1].name);
     rrd_add_src(plugin, &src[1]);
-    rrd_sample(plugin);
+    rc = rrd_sample(plugin);
+    assert(rc == RRD_OK);
 
+    printf("removing source: %s\n", src[0].name);
     rrd_del_src(plugin, &src[0]);
-    rrd_sample(plugin);
+    rc = rrd_sample(plugin);
+    assert(rc == RRD_OK);
 
+    printf("removing source: %s\n", src[1].name);
     rrd_del_src(plugin, &src[1]);
     rrd_close(plugin);
     return 0;
