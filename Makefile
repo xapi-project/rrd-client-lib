@@ -17,13 +17,16 @@ clean:
 	rm -f librrd.a
 	rm -f librrd.o
 	rm -f parson/parson.o
-	rm -f rrdtest.o
-	rm -f rrdtest
+	rm -f rrdtest.o rrdtest
+	rm -f rrdclient.o rrdclient
 
 .PHONY: test
 test: 	rrdtest rrdclient
 	./rrdtest
 	seq 1 10 | ./rrdclient rrdclient.rrd
+	seq 1 10 \
+		| while read i; do echo $$i; sleep 1; done \
+		| ./rrdclient rrdclient.rrd
 
 .PHONY: valgrind
 valgrind: rrdtest

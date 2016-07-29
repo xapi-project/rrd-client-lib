@@ -55,6 +55,19 @@ samples values from all data sources and writes the data to the `path`
 provided to `rrd_open`. It is the client's responsibility to call
 `rrd_sample` regularly at an interval of 5 seconds.
 
+## Sample Code
+
+See `rrdclient.c` for a simple client that reads integers from standard
+input as a data source and reports them to RRD. Here is how everything
+is compiled and linked:
+
+    gcc -std=gnu99 -g -Wall -c -o librrd.o librrd.c
+    gcc -std=gnu99 -g -Wall -c -o parson/parson.o parson/parson.c
+    ar rc librrd.a librrd.o parson/parson.o
+    ranlib librrd.a
+    gcc -std=gnu99 -g -Wall -c -o rrdclient.o rrdclient.c
+    gcc -std=gnu99 -g -Wall -o rrdclient rrdclient.o librrd.a -lz
+
 ## Interface
 
     <<librrd.h>>=
