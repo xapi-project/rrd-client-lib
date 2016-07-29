@@ -1,0 +1,6 @@
+*.[ch]~
+rrdtest
+*.o
+*.a
+*.rrd
+
