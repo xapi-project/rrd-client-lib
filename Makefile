@@ -32,10 +32,11 @@ valgrind: rrdtest
 indent: librrd.h librrd.c rrdtest.c
 	indent -orig -nut $^
 
-.PHONE: depend
+.PHONY: depend
 depend: librrd.c rrdtest.c
 	$(CC) -MM $^
 
+.PHONY: parson
 parson:
 	# git submodule add https://github.com/kgabis/parson.git
 	git submodule init
