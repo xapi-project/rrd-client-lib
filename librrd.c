@@ -323,7 +323,7 @@ rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
     while (i < RRD_MAX_SOURCES && plugin->sources[i] != source)
         i++;
     if (i >= RRD_MAX_SOURCES) {
-        return RRD_NO_SOUCH_SOURCE;
+        return RRD_NO_SUCH_SOURCE;
     }
     plugin->sources[i] = NULL;
     plugin->n--;
