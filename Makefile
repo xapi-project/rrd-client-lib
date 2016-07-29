@@ -9,7 +9,7 @@ OBJ 	+= parson/parson.o
 LIB     += -lz
 
 .PHONY: all
-all:	librrd.a rrdtest
+all:	librrd.a rrdtest rrdclient
 
 .PHONY: clean
 clean:
@@ -21,12 +21,14 @@ clean:
 	rm -f rrdtest
 
 .PHONY: test
-test: 	rrdtest
+test: 	rrdtest rrdclient
 	./rrdtest
+	seq 1 10 | ./rrdclient rrdclient.rrd
 
 .PHONY: valgrind
 valgrind: rrdtest
 	valgrind --leak-check=yes ./rrdtest
+	seq 1 10 | valgrind --leak-check=yes ./rrdclient rrdclient.rrd
 
 .PHONY: indent
 indent: librrd.h librrd.c rrdtest.c
@@ -50,6 +52,9 @@ librrd.a: $(OBJ)
 	ranlib $@
 
 rrdtest: rrdtest.o librrd.a
+	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
+
+rrdclient: rrdclient.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
 
 parson/parson.h: 	parson
