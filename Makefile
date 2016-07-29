@@ -37,7 +37,9 @@ depend: librrd.c rrdtest.c
 	$(CC) -MM $^
 
 parson:
-	git submodule add https://github.com/kgabis/parson.git
+	# git submodule add https://github.com/kgabis/parson.git
+	git submodule init
+	git submodule update
 
 %.o:	%.c
 	$(CC) $(CFLAGS) -c -o $@ $<

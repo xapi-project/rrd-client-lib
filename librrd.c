@@ -1,7 +1,27 @@
 /*
- * vim: set ts=4 sw=4 noet:
- */
 
+Copyright (c) 2016 Citrix
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,6 +33,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <arpa/inet.h>
 
 #include "librrd.h"
 #include "parson/parson.h"
@@ -20,6 +41,10 @@
 #define MAGIC "DATASOURCES"
 #define MAGIC_SIZE (sizeof (MAGIC)-1)
 
+#ifndef DARWIN
+#include <endian.h>
+#define htonll(x) htobe64(x)
+#endif
 
 struct rrd_header {
     char            rrd_magic[MAGIC_SIZE];
@@ -27,17 +52,8 @@ struct rrd_header {
     uint32_t        rrd_checksum_meta;
     uint32_t        rrd_header_datasources;
     uint64_t        rrd_timestamp;
-} __attribute__ ((packed)) __;
+} __attribute__ ((packed));
 typedef struct rrd_header RRD_HEADER;
-
-uint64_t
-htonll(const uint64_t in)
-{
-    unsigned char   out[8] =
-        { in >> 56, in >> 48, in >> 40, in >> 32,
-          in >> 24, in >> 16, in >>  8, in };
-    return *(uint64_t *) out;
-}
 
 static void
 invalidate(RRD_PLUGIN * plugin)
@@ -63,6 +79,7 @@ json_for_source(RRD_SOURCE * source)
     json_object_set_string(src, "units", source->rrd_units);
     json_object_set_string(src, "min", source->min);
     json_object_set_string(src, "max", source->max);
+    json_object_set_boolean(src, "default", source->rrd_default);
 
     char           *owner = NULL;
     switch (source->owner) {
@@ -205,7 +222,6 @@ rrd_open(char *name, rrd_domain domain, char *path)
 
     plugin->name = name;
     plugin->domain = domain;
-    plugin->json = NULL;
     for (int i = 0; i < RRD_MAX_SOURCES; i++) {
         plugin->sources[i] = (RRD_SOURCE *) NULL;
     }
