@@ -1,4 +1,7 @@
 
+[![Build Status](https://travis-ci.org/lindig/rrd-lib-client-1.svg?branch=master)](https://travis-ci.org/lindig/rrd-lib-client-1)
+
+
 # rrd-client-lib - A Library to Provide RRD Data
 
 The RRD service is a system-level service that aggregates
