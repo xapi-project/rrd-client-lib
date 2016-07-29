@@ -52,6 +52,9 @@ librrd.a: $(OBJ)
 rrdtest: rrdtest.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
 
+parson/parson.h: 	parson
+parson/parson.c: 	parson
+
 parson/parson.o: 	parson/parson.h
 rrdtest.o: 		parson/parson.h librrd.h
 librrd.o: 		parson/parson.h librrd.h

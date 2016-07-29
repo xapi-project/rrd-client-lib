@@ -22,6 +22,13 @@ needs to be initialised:
 
     ./rrdtest
 
+## Parson
+
+The [Parson](https://github.com/kgabis/parson.git) library is included
+as a Git submodule. A submodule points to a specific commit in an
+external repository and does not track its master branch as this
+advances. Instead, it needs to be updated explicitly.
+
 ## Documentation - Overview
 
 The header file `librrd.h` contains the essential information to use the
