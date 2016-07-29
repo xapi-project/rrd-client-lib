@@ -48,7 +48,7 @@ sample(void)
 
     v.int64 = numbers[i++ % (sizeof(numbers) / sizeof(numbers[0]))];
 
-    printf("sample called: %ld\n", v.int64);
+    printf("sample called: %lld\n", v.int64);
     return v;
 }
 

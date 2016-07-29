@@ -43,7 +43,7 @@
 #define MAGIC "DATASOURCES"
 #define MAGIC_SIZE (sizeof (MAGIC)-1)
 
-#ifndef DARWIN
+#ifndef __APPLE__
 #include <endian.h>
 #define htonll(x) htobe64(x)
 #endif
