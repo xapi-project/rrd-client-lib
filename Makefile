@@ -3,7 +3,7 @@
 #
 
 CC	= gcc
-CFLAGS	= -g -Wall
+CFLAGS	= -std=gnu99 -g -Wall
 OBJ	+= librrd.o
 OBJ 	+= parson/parson.o
 LIB     += -lz
