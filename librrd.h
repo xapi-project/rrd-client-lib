@@ -33,10 +33,28 @@
 #define RRD_FILE_ERROR          3
 #define RRD_ERROR               4
 
-typedef enum { RRD_LOCAL_DOMAIN = 0, RRD_INTER_DOMAIN } rrd_domain;
-typedef enum { RRD_GAUGE = 0, RRD_ABSOLUTE, RRD_DERIVE } rrd_scale;
-typedef enum { RRD_HOST = 0, RRD_VM, RRD_SR } rrd_owner;
-typedef enum { RRD_FLOAT64 = 0, RRD_INT64 } rrd_type;
+/* rrd_domain_t */
+typedef int32_t rrd_domain_t;
+#define RRD_LOCAL_DOMAIN        0
+#define RRD_INTER_DOMAIN        1
+
+/* rrd_scale_t */
+typedef int32_t rrd_scale_t;
+#define RRD_GAUGE               0
+#define RRD_ABSOLUTE            1
+#define RRD_DERIVE              2
+
+/* rrd_owner_t */
+typedef int32_t rrd_owner_t;
+#define RRD_HOST                0
+#define RRD_VM                  1
+#define RRD_SR                  2
+
+/* rrd_type_t */
+typedef int32_t rrd_type_t;
+#define RRD_FLOAT64             0
+#define RRD_INT64               1
+
 
 /*
  * An RRD_SOURCE can report float or integer values - represented as a
@@ -44,8 +62,8 @@ typedef enum { RRD_FLOAT64 = 0, RRD_INT64 } rrd_type;
  */
 typedef union {
     int64_t         int64;
-    float           float64;
-} rrd_value;
+    double          float64;
+} rrd_value_t;
 
 /*
  * An RRD_SOURCE describes the value being reported and contains a
@@ -55,34 +73,18 @@ typedef union {
 typedef struct rrd_source {
     char           *name;       /* name of the data source */
     char           *description;        /* for user interface */
-    rrd_owner       owner;
-    int             rrd_default;        /* true: rrd daemon will archive */
     char           *owner_uuid; /* UUID of the owner or NULL */
     char           *rrd_units;  /* for user interface */
-    rrd_scale       scale;      /* presentation of value */
-    rrd_type        type;       /* type of value */
     char           *min;        /* min <= sample() <= max */
     char           *max;        /* min <= sample() <= max */
-                    rrd_value(*sample) (void);  /* reads value that gets *
-                                                 * reported */
+                    rrd_value_t(*sample) (void);  /* reads value */
+    rrd_owner_t     owner;
+    int32_t         rrd_default;        /* true: rrd daemon will archive */
+    rrd_scale_t     scale;      /* presentation of value */
+    rrd_type_t      type;       /* type of value */
 } RRD_SOURCE;
 
-/*
- * The type RRD_PLUGIN below is private to the implementation and
- * entirely managed by it.
- */
-
-typedef struct rrd_plugin {
-    char           *name;       /* name of the plugin */
-    int             file;       /* where we report data */
-    rrd_domain      domain;     /* domain of this plugin */
-    RRD_SOURCE     *sources[RRD_MAX_SOURCES];
-    uint32_t        n;          /* number of used slots */
-    JSON_Value     *meta;       /* meta data for the plugin */
-    char           *buf;        /* buffer where we keep protocol data */
-    size_t          buf_size;   /* size of the buffer */
-} RRD_PLUGIN;
-
+typedef struct rrd_plugin RRD_PLUGIN;
 
 /*
  * Memory management policy: the library does not free the memory of any
@@ -99,7 +101,7 @@ typedef struct rrd_plugin {
  * returns:
  * NULL on error
  */
-RRD_PLUGIN     *rrd_open(char *name, rrd_domain domain, char *path);
+RRD_PLUGIN     *rrd_open(char *name, rrd_domain_t domain, char *path);
 
 /*
  * rrd_close - close a plugin. Data sources do not need to be removed

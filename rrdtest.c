@@ -40,10 +40,10 @@ static int64_t  numbers[] =
  * index into the array that wraps around when it reaches the end.
  */
 
-static          rrd_value
+static          rrd_value_t
 sample(void)
 {
-    rrd_value       v;
+    rrd_value_t     v;
     static size_t   i = 0;
 
     v.int64 = numbers[i++ % (sizeof(numbers) / sizeof(numbers[0]))];

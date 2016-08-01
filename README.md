@@ -37,11 +37,11 @@ advances. Instead, it needs to be updated explicitly.
 The header file `librrd.h` contains the essential information to use the
 library:
 
-    typedef ...     rrd_value;
+    typedef ...     rrd_value_t;
     typedef ...     RRD_SOURCE;
     typedef ...     RRD_PLUGIN;
 
-    RRD_PLUGIN     *rrd_open(char *name, rrd_domain domain, char *path);
+    RRD_PLUGIN     *rrd_open(char *name, rrd_domain_t domain, char *path);
     int             rrd_close(RRD_PLUGIN * plugin);
     int             rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
     int             rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
@@ -94,11 +94,10 @@ A plugin opens a file for communication and periodically calls
 considered private to the library.
 
     <<type definitions>>=
-    typedef enum { RRD_LOCAL_DOMAIN = 0, RRD_INTER_DOMAIN } rrd_domain;
-
+    typedef int rrd_domain_t;
 
     <<function declarations>>=
-    RRD_PLUGIN     *rrd_open(char *name, rrd_domain domain, char *path);
+    RRD_PLUGIN     *rrd_open(char *name, rrd_domain_t domain, char *path);
     int             rrd_close(RRD_PLUGIN * plugin);
     int             rrd_sample(RRD_PLUGIN * plugin);
 
@@ -114,30 +113,30 @@ integer or float values. Data sources can be added and removed
 dynamically.
 
     <<type definitions>>=
-    typedef enum { RRD_GAUGE = 0, RRD_ABSOLUTE, RRD_DERIVE } rrd_scale;
-    typedef enum { RRD_HOST = 0, RRD_VM, RRD_SR } rrd_owner;
-    typedef enum { RRD_FLOAT64 = 0, RRD_INT64 } rrd_type;
-    
+    typedef int32_t rrd_scale_t;
+    typedef int32_t rrd_owner_t;
+    typedef int32_t rrd_type_t;
+
     typedef union {
         int64_t         int64;
-        float           float64;
-    } rrd_value;
-    
+        double          float64;
+    } rrd_value_t;
+
     typedef struct rrd_source {
         char           *name;       /* name of the data source */
         char           *description;        /* for user interface */
-        rrd_owner       owner;
-        int             rrd_default;/* true: rrd daemon will archive */
         char           *owner_uuid; /* UUID of the owner or NULL */
         char           *rrd_units;  /* for user interface */
-        rrd_scale       scale;      /* presentation of value */
-        rrd_type        type;       /* type of value */
         char           *min;        /* min <= sample() <= max */
         char           *max;        /* min <= sample() <= max */
-                        rrd_value(*sample) (void);  /* reads value that gets *
-                                                     * reported */
+                        rrd_value_t(*sample) (void);  /* reads value */
+        rrd_owner_t     owner;
+        int32_t         rrd_default;/* true: rrd daemon will archive */
+        rrd_scale_t     scale;      /* presentation of value */
+        rrd_type_t      type;       /* type of value */
     } RRD_SOURCE;
-    
+
+   
     
     <<typedef RRD_PLUGIN>>
     
@@ -171,18 +170,7 @@ Some functions return an error code.
     <<constants>>=
     #define RRD_MAX_SOURCES           128
     
-    
-    <<typedef RRD_PLUGIN>>=
-    typedef struct rrd_plugin {
-        char           *name;       /* name of the plugin */
-        int             file;       /* where we report data */
-        rrd_domain      domain;     /* domain of this plugin */
-        RRD_SOURCE     *sources[RRD_MAX_SOURCES];
-        uint32_t        n;          /* number of used slots */
-        JSON_Value     *meta;       /* meta data for the plugin */
-        char           *buf;        /* buffer where we keep protocol data */
-        size_t          buf_size;   /* size of the buffer */
-    } RRD_PLUGIN;
+    typedef struct rrd_plugin RRD_PLUGIN;
     
 
 ## Design

@@ -33,9 +33,9 @@
 #include <fcntl.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <arpa/inet.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "librrd.h"
 #include "parson/parson.h"
@@ -49,16 +49,34 @@
 #endif
 
 /*
+ * The type RRD_PLUGIN below is private to the implementation and
+ * entirely managed by it.
+ */
+
+typedef struct rrd_plugin {
+    char           *name;       /* name of the plugin */
+    RRD_SOURCE     *sources[RRD_MAX_SOURCES];
+    JSON_Value     *meta;       /* meta data for the plugin */
+    char           *buf;        /* buffer where we keep protocol data */
+    rrd_domain_t    domain;     /* domain of this plugin */
+    uint32_t        n;          /* number of used slots */
+    size_t          buf_size;   /* size of the buffer */
+    int             file;       /* where we report data */
+} RRD_PLUGIN;
+
+
+/*
  * The struct represents the first 31 bytes in the protocol header. Fields
  * are not 4-byte or 8-byte aligned which is why we need the packed
  * attribute.
  */
 struct rrd_header {
-    char            rrd_magic[MAGIC_SIZE];
+    uint8_t         rrd_magic[MAGIC_SIZE];
     uint32_t        rrd_checksum_value;
     uint32_t        rrd_checksum_meta;
     uint32_t        rrd_header_datasources;
     uint64_t        rrd_timestamp;
+    uint32_t        rrd_data[0]; /* more data follows */
 } __attribute__ ((packed));
 typedef struct rrd_header RRD_HEADER;
 
@@ -108,7 +126,7 @@ json_for_source(RRD_SOURCE * source)
         owner = "rrd";
         break;
     default:
-        assert(0);
+        abort();
     }
     json_object_set_string(src, "owner", owner);
 
@@ -121,7 +139,7 @@ json_for_source(RRD_SOURCE * source)
         value_type = "float";
         break;
     default:
-        assert(0);
+        abort();
     }
     json_object_set_string(src, "value_type", value_type);
 
@@ -138,7 +156,7 @@ json_for_source(RRD_SOURCE * source)
         scale = "derive";
         break;
     default:
-        assert(0);
+        abort();
     }
     json_object_set_string(src, "type", scale);
 
@@ -171,7 +189,7 @@ json_for_plugin(RRD_PLUGIN * plugin)
  * initialise the buffer that we update and write out to a file. Once
  * initialised, it is kept up to date by sample().
  */
-static void
+static int
 initialise(RRD_PLUGIN * plugin)
 {
 
@@ -184,9 +202,11 @@ initialise(RRD_PLUGIN * plugin)
     assert(plugin);
     assert(plugin->meta == NULL);
     assert(plugin->buf == NULL);
+    assert(plugin->n <= RRD_MAX_SOURCES);
 
     plugin->meta = json_for_plugin(plugin);
     size_meta = json_serialization_size_pretty(plugin->meta);
+    assert(size_meta < 2048 * plugin->n); /* just a safeguard */
 
     size_total = 0;
     size_total += sizeof(RRD_HEADER);
@@ -200,10 +220,9 @@ initialise(RRD_PLUGIN * plugin)
         /*
          * fatal
          */
-        perror("buffer_init");
-        exit(1);
+        plugin->buf_size = 0;
+        return -1;
     }
-
     /*
      * all values need to be in network byte order
      */
@@ -212,6 +231,12 @@ initialise(RRD_PLUGIN * plugin)
     header->rrd_checksum_value = htonl(0x01234567);
     header->rrd_header_datasources = htonl(plugin->n);
     header->rrd_timestamp = htonll((uint64_t) time(NULL));
+    if (header->rrd_timestamp == -1) {
+        free(plugin->buf);
+        plugin->buf_size = 0;
+        plugin->buf = NULL;
+        return -1;
+    }
 
     p64 = (int64_t *) (plugin->buf + sizeof(RRD_HEADER));
     for (size_t i = 0; i < plugin->n; i++) {
@@ -225,6 +250,7 @@ initialise(RRD_PLUGIN * plugin)
     crc = crc32(0L, Z_NULL, 0);
     crc = crc32(crc, (unsigned char *) p32, size_meta);
     header->rrd_checksum_meta = htonl(crc);
+    return 0;
 }
 
 /*
@@ -233,12 +259,12 @@ initialise(RRD_PLUGIN * plugin)
  * rrd_add_src.
  */
 RRD_PLUGIN     *
-rrd_open(char *name, rrd_domain domain, char *path)
+rrd_open(char *name, rrd_domain_t domain, char *path)
 {
     assert(name);
     assert(path);
 
-    RRD_PLUGIN     *plugin = (RRD_PLUGIN *) malloc(sizeof(RRD_PLUGIN));
+    RRD_PLUGIN     *plugin = malloc(sizeof(RRD_PLUGIN));
     if (!plugin) {
         return NULL;
     }
@@ -257,11 +283,10 @@ rrd_open(char *name, rrd_domain domain, char *path)
     plugin->meta = NULL;
 
     plugin->file = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (!plugin->file) {
+    if (plugin->file == -1) {
         free(plugin);
         return NULL;
     }
-
     return plugin;
 }
 
@@ -274,14 +299,13 @@ int
 rrd_close(RRD_PLUGIN * plugin)
 {
     assert(plugin);
+    int rc;
 
-    if (close(plugin->file) != 0) {
-        return RRD_FILE_ERROR;
-    }
+    rc = close(plugin->file);
     json_value_free(plugin->meta);
     free(plugin->buf);
     free(plugin);
-    return RRD_OK;
+    return (rc == 0 ? RRD_OK : RRD_FILE_ERROR);
 }
 
 /*
@@ -338,6 +362,24 @@ rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source)
 }
 
 /*
+ * write data to fd
+ */
+static int
+write_exact(int fd, const void *data, size_t size)
+{
+    size_t          offset = 0;
+    ssize_t         len;
+    while (offset < size) {
+        len = write(fd, (const char *) data + offset, size - offset);
+        if ((len == -1) && (errno == EINTR))
+            continue;
+        if (len <= 0)
+            return -1;
+        offset += len;
+    }
+    return 0;
+}
+/*
  * Sample obtains a values form all data sources by calling their sample
  * functions. It updates the buffer with all data and writes it out. If
  * there is no buffer it means it was invalidated previously because a
@@ -357,7 +399,11 @@ rrd_sample(RRD_PLUGIN * plugin)
     json_value_free(json);
 
     if (plugin->buf == NULL) {
-        initialise(plugin);
+        int rc;
+        rc = initialise(plugin);
+        if (rc != 0) {
+            return RRD_ERROR;
+        }
     }
     assert(plugin->buf);
     header = (RRD_HEADER *) plugin->buf;
@@ -369,7 +415,7 @@ rrd_sample(RRD_PLUGIN * plugin)
     for (size_t i = 0; i < RRD_MAX_SOURCES; i++) {
         if (plugin->sources[i] == NULL)
             continue;
-        rrd_value       v = plugin->sources[i]->sample();
+        rrd_value_t     v = plugin->sources[i]->sample();
         *p++ = htonll((uint64_t) v.int64);
         n++;
     }
@@ -394,17 +440,8 @@ rrd_sample(RRD_PLUGIN * plugin)
     if (lseek(plugin->file, 0, SEEK_SET) < 0) {
         return RRD_FILE_ERROR;
     }
-    ssize_t         written;
-    ssize_t         remaining = plugin->buf_size;
-    char           *buf = plugin->buf;
-    while (remaining > 0) {
-        written = write(plugin->file, buf, remaining);
-        if (written < 0) {
-            return RRD_FILE_ERROR;
-        }
-        remaining -= written;
-        buf += written;
+    if (write_exact(plugin->file, plugin->buf, plugin->buf_size) != 0) {
+        return RRD_FILE_ERROR;
     }
-
     return RRD_OK;
 }

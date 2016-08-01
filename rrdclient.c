@@ -29,9 +29,9 @@
 #include "assert.h"
 
 static RRD_SOURCE src;
-static rrd_value v;
+static rrd_value_t v;
 
-static          rrd_value
+static          rrd_value_t
 sample(void)
 {
     printf("sample called: %ld\n", v.int64);
