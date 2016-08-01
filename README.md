@@ -27,9 +27,9 @@ needs to be initialised:
 
 ## Parson
 
-The [Parson](https://github.com/kgabis/parson.git) library is included
-as a Git submodule. A submodule points to a specific commit in an
-external repository and does not track its master branch as this
+The JSON library [Parson](https://github.com/kgabis/parson.git) is
+included as a Git submodule. A submodule points to a specific commit in
+an external repository and does not track its master branch as this
 advances. Instead, it needs to be updated explicitly.
 
 ## Documentation - Overview
@@ -79,13 +79,13 @@ is compiled and linked:
     <<constants>>
     <<type definitions>>
     <<function declarations>>
-    
+
 
 All strings are in UTF8 encoding. The library implements the following
 policy to manage memory: it does not free any memory that is hasn't
 itself allocated. This means, if the client passes dynamically allocated
 data into the library, it is the client's responsibility to de-allocate
-it. 
+it.
 
 ## Open, Sample, Close
 
@@ -95,13 +95,13 @@ considered private to the library.
 
     <<type definitions>>=
     typedef enum { RRD_LOCAL_DOMAIN = 0, RRD_INTER_DOMAIN } rrd_domain;
-    
-    
+
+
     <<function declarations>>=
     RRD_PLUGIN     *rrd_open(char *name, rrd_domain domain, char *path);
     int             rrd_close(RRD_PLUGIN * plugin);
     int             rrd_sample(RRD_PLUGIN * plugin);
-    
+
 
 The name of the plugin is descriptive, as whether it reports data
 for a single machine (`RRD_LOCAL_DOMAIN`) or multiple
@@ -160,7 +160,7 @@ Some functions return an error code.
     
     #define RRD_OK                  0
     #define RRD_TOO_MANY_SOURCES    1
-    #define RRD_NO_SOUCH_SOURCE     2
+    #define RRD_NO_SUCH_SOURCE      2
     #define RRD_FILE_ERROR          3
     #define RRD_ERROR               4
     

@@ -2,6 +2,8 @@
 #
 #
 
+PATH    := $(PATH):/tmp/cov-analysis-linux64-8.5.0.1/bin
+
 CC	= gcc
 CFLAGS	= -std=gnu99 -g -Wall
 OBJ	+= librrd.o
@@ -59,6 +61,13 @@ rrdtest: rrdtest.o librrd.a
 
 rrdclient: rrdclient.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
+
+# coverity analysis
+cov: 	parson
+	cov-configure --gcc --config config.xml
+	cov-build --dir cov-int --config config.xml $(MAKE)
+	cov-analyze --dir cov-int --config config.xml
+	cov-format-errors --dir cov-int --emacs-style > coverity.out
 
 parson/parson.h: 	parson
 parson/parson.c: 	parson
