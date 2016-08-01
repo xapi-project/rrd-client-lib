@@ -2,8 +2,6 @@
 #
 #
 
-PATH    := $(PATH):/tmp/cov-analysis-linux64-8.5.0.1/bin
-
 CC	= gcc
 CFLAGS	= -std=gnu99 -g -Wall
 OBJ	+= librrd.o
@@ -21,6 +19,7 @@ clean:
 	rm -f parson/parson.o
 	rm -f rrdtest.o rrdtest
 	rm -f rrdclient.o rrdclient
+	rm -rf config.xml cov-int html coverity.out
 
 .PHONY: test
 test: 	rrdtest rrdclient
@@ -63,11 +62,22 @@ rrdclient: rrdclient.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
 
 # coverity analysis
+
+COV_OPTS += --cpp
+COV_OPTS += --aggressiveness-level high
+COV_OPTS += --all
+COV_OPTS += --rule
+COV_OPTS += --disable-parse-warnings
+COV_OPTS += --enable-fnptr
+
+COV_DIR = cov-int
+
 cov: 	parson
 	cov-configure --gcc --config config.xml
-	cov-build --dir cov-int --config config.xml $(MAKE)
-	cov-analyze --dir cov-int --config config.xml
-	cov-format-errors --dir cov-int --emacs-style > coverity.out
+	cov-build --dir $(COV_DIR)  --config config.xml $(MAKE)
+	cov-analyze $(COV_OPTS) --dir $(COV_DIR) --config config.xml
+	cov-format-errors --dir $(COV_DIR)  --emacs-style > coverity.out
+	cov-format-errors --dir $(COV_DIR) --html-output html
 
 parson/parson.h: 	parson
 parson/parson.c: 	parson

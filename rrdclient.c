@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include "librrd.h"
+#include "assert.h"
 
 static RRD_SOURCE src;
 static rrd_value v;
@@ -67,9 +68,11 @@ main(int argc, char **argv)
     src.rrd_default = 0;
     src.sample = sample;
 
+    int rc;
     while (fgets(line, sizeof(line), stdin) != NULL) {
         v.int64 = (int64_t) atol(line);
-        rrd_sample(plugin);
+        rc = rrd_sample(plugin);
+        assert(rc == RRD_OK);
     }
 
     rrd_del_src(plugin, &src);
