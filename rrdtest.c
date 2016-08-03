@@ -27,6 +27,7 @@
 #include <libgen.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <unistd.h>
 
 #include "librrd.h"
 
@@ -40,75 +41,142 @@ static int64_t  numbers[] =
  * index into the array that wraps around when it reaches the end.
  */
 
-static          rrd_value_t
+static rrd_value_t
 sample(void)
 {
-    rrd_value_t     v;
-    static size_t   i = 0;
-
+    rrd_value_t v;
+    static size_t i = 0;
     v.int64 = numbers[i++ % (sizeof(numbers) / sizeof(numbers[0]))];
-
     printf("sample called: %"PRId64"\n", v.int64);
     return v;
 }
 
-static RRD_SOURCE src[2];
-
-int
-main(int argc, char **argv)
+RRD_SOURCE create_rrd_source(char *name, char *description, rrd_owner_t own, char *owner_uuid,
+        char *units, rrd_scale_t scl, rrd_type_t typ, char *min, char *max, int rrd_default, rrd_value_t (*f)())
 {
-    RRD_PLUGIN     *plugin;
-    int             rc;
+    RRD_SOURCE src;
+    src.name = name;
+    src.description = description;
+    src.owner = own;
+    src.owner_uuid = owner_uuid;
+    src.rrd_units = units;
+    src.scale = scl;
+    src.type = typ;
+    src.min = min;
+    src.max = max;
+    src.rrd_default = rrd_default;
+    src.sample = (*f);
+    return src;
+}
+
+int main(int argc, char **argv)
+{
+    RRD_PLUGIN *plugin1, *plugin2;
+    RRD_SOURCE src1[2], src2[2];
+    int rc;
 
     if (argc != 1) {
         fprintf(stderr, "usage: %s\n", basename(argv[0]));
         exit(1);
     }
 
-    plugin = rrd_open("rrdtest", RRD_LOCAL_DOMAIN, "rrdtest.rrd");
-    assert(plugin);
+    /* Tests for plugin1 and sources */
+    plugin1 = rrd_open("rrdplugin1", RRD_LOCAL_DOMAIN, "rrdplugin1.rrd");
+    assert(plugin1);
 
-    src[0].name = "first";
-    src[0].description = "description";
-    src[0].owner = RRD_HOST;
-    src[0].owner_uuid = "4cc1f2e0-5405-11e6-8c2f-572fc76ac144";
-    src[0].rrd_units = "points";
-    src[0].scale = RRD_GAUGE;
-    src[0].type = RRD_INT64;
-    src[0].min = "-inf";
-    src[0].max = "inf";
-    src[0].rrd_default = 1;
-    src[0].sample = sample;
-
-    printf("adding source: %s\n", src[0].name);
-    rrd_add_src(plugin, &src[0]);
-    rc = rrd_sample(plugin);
+    /* Test for adding datasource:RRD_SOURCE_1 to plugin:rrdplugin1 */
+    src1[0] = create_rrd_source("RRD_SOURCE_1", "First RRD source", RRD_HOST, "4cc1f2e0-5405-11e6-8c2f-572fc76ac144",
+            "BYTE", RRD_GAUGE, RRD_INT64, "-inf", "inf", 1, sample);
+    rrd_add_src(plugin1, &src1[0]);
+    sleep(1);
+    rc = rrd_sample(plugin1);
     assert(rc == RRD_OK);
 
-    src[1].name = "second";
-    src[1].description = "description";
-    src[1].owner = RRD_HOST;
-    src[1].owner_uuid = "e8969702-5414-11e6-8cf5-47824be728c3";
-    src[1].rrd_units = "points";
-    src[1].scale = RRD_GAUGE;
-    src[1].type = RRD_INT64;
-    src[1].min = "-inf";
-    src[1].max = "inf";
-    src[1].rrd_default = 1;
-    src[1].sample = sample;
-
-    printf("adding source: %s\n", src[1].name);
-    rrd_add_src(plugin, &src[1]);
-    rc = rrd_sample(plugin);
+    /* Call rrd_sample to update value */
+    sleep(1);
+    rc = rrd_sample(plugin1);
     assert(rc == RRD_OK);
 
-    printf("removing source: %s\n", src[0].name);
-    rrd_del_src(plugin, &src[0]);
-    rc = rrd_sample(plugin);
+    /* Test for adding datasource:RRD_SOURCE_2 to plugin:rrdplugin1 */
+    src1[1] = create_rrd_source("RRD_SOURCE_2", "Second RRD source", RRD_HOST, "e8969702-5414-11e6-8cf5-47824be728c3",
+            "BYTE", RRD_GAUGE, RRD_INT64, "-inf", "inf", 1, sample);
+    rrd_add_src(plugin1, &src1[1]);
+    sleep(1);
+    rc = rrd_sample(plugin1);
     assert(rc == RRD_OK);
 
-    printf("removing source: %s\n", src[1].name);
-    rrd_del_src(plugin, &src[1]);
-    rrd_close(plugin);
+    /* Call rrd_sample to update value */
+    sleep(1);
+    rc = rrd_sample(plugin1);
+    assert(rc == RRD_OK);
+
+    /* Test for deleting datasource:RRD_SOURCE_1 from plugin:rrdplugin1 */
+    rrd_del_src(plugin1, &src1[0]);
+    sleep(1);
+    rc = rrd_sample(plugin1);
+    assert(rc == RRD_OK);
+
+    /* Call rrd_sample to update value */
+    sleep(1);
+    rc = rrd_sample(plugin1);
+    assert(rc == RRD_OK);
+
+    /* Test for deleting datasource:RRD_SOURCE_2 from plugin:rrdplugin1 */
+    rrd_del_src(plugin1, &src1[1]);
+    sleep(1);
+    rc = rrd_sample(plugin1);
+    assert(rc == RRD_OK);
+    rc = rrd_close(plugin1);
+    assert(rc == RRD_OK);
+
+    /* Tests for plugin2 and sources */
+    plugin2 = rrd_open("rrdplugin2", RRD_LOCAL_DOMAIN, "rrdplugin2.rrd");
+    assert(plugin2);
+
+    /* Test for adding datasource:RRD_SOURCE_1 to plugin:rrdplugin2 */
+    src2[0] = create_rrd_source("RRD_SOURCE_1", "First RRD source", RRD_HOST, "ff12b384-96f1-4142-a9c6-21db5fedb4a1",
+            "BYTE", RRD_GAUGE, RRD_INT64, "-inf", "inf", 1, sample);
+    rrd_add_src(plugin2, &src2[0]);
+    sleep(1);
+    rc = rrd_sample(plugin2);
+    assert(rc == RRD_OK);
+
+    /* Call rrd_sample to update value */
+    sleep(1);
+    rc = rrd_sample(plugin1);
+    assert(rc == RRD_OK);
+
+    /* Test for adding datasource:RRD_SOURCE_2 to plugin:rrdplugin2 */
+    src2[1] = create_rrd_source("RRD_SOURCE_2", "Second RRD source", RRD_HOST, "7730f117-5817-4aee-bbcd-4079633ee04a",
+            "BYTE", RRD_GAUGE, RRD_INT64, "-inf", "inf", 1, sample);
+    rrd_add_src(plugin2, &src2[1]);
+    sleep(1);
+    rc = rrd_sample(plugin2);
+    assert(rc == RRD_OK);
+
+    /* Call rrd_sample to update value */
+    sleep(1);
+    rc = rrd_sample(plugin2);
+    assert(rc == RRD_OK);
+
+    /* Test for deleting datasource:RRD_SOURCE_1 from plugin:rrdplugin2 */
+    rrd_del_src(plugin2, &src2[0]);
+    sleep(1);
+    rc = rrd_sample(plugin2);
+    assert(rc == RRD_OK);
+
+    /* Call rrd_sample to update value */
+    sleep(1);
+    rc = rrd_sample(plugin2);
+    assert(rc == RRD_OK);
+
+    /* Test for deleting datasource:RRD_SOURCE_2 from plugin:rrdplugin2 */
+    rrd_del_src(plugin2, &src2[1]);
+    sleep(1);
+    rc = rrd_sample(plugin2);
+    assert(rc == RRD_OK);
+    rc = rrd_close(plugin2);
+    assert(rc == RRD_OK);
+
     return 0;
 }
