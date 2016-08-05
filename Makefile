@@ -8,6 +8,8 @@ OBJ	+= librrd.o
 OBJ 	+= parson/parson.o
 LIB     += -lz
 
+OCB 	= ocamlbuild -use-ocamlfind
+
 .PHONY: all
 all:	librrd.a rrdtest rrdclient
 
@@ -20,6 +22,7 @@ clean:
 	rm -f rrdtest.o rrdtest
 	rm -f rrdclient.o rrdclient
 	rm -rf config.xml cov-int html coverity.out
+	cd ocaml;  $(OCB) -clean
 
 .PHONY: test
 test: 	rrdtest rrdclient
@@ -79,9 +82,18 @@ cov: 	parson
 	cov-format-errors --dir $(COV_DIR)  --emacs-style > coverity.out
 	cov-format-errors --dir $(COV_DIR) --html-output html
 
+# C dependencies
+
 parson/parson.h: 	parson
 parson/parson.c: 	parson
 
 parson/parson.o: 	parson/parson.h
 rrdtest.o: 		parson/parson.h librrd.h
 librrd.o: 		parson/parson.h librrd.h
+
+# OCaml test utility
+# You need: yum install -y ocaml-rrd-transport-devel
+
+rrdreader:
+	cd ocaml; $(OCB) -pkg rrd-transport -tag thread rrdreader.native
+
