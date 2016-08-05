@@ -112,7 +112,8 @@ json_for_source(RRD_SOURCE * source)
     json_object_set_string(src, "units", source->rrd_units);
     json_object_set_string(src, "min", source->min);
     json_object_set_string(src, "max", source->max);
-    json_object_set_boolean(src, "default", source->rrd_default);
+    json_object_set_string(src, "default",
+                           source->rrd_default ? "true" : "false");
 
     char           *owner = NULL;
     switch (source->owner) {
@@ -162,7 +163,6 @@ json_for_source(RRD_SOURCE * source)
 
     return json;
 }
-
 /*
  * Generate JSON for a plugin. This is just a JSON object containing a
  * sub-objecy for every data source.
@@ -172,19 +172,22 @@ json_for_plugin(RRD_PLUGIN * plugin)
 {
     assert(plugin);
 
-    JSON_Value     *json = json_value_init_object();
-    JSON_Object    *root = json_value_get_object(json);
-    JSON_Value     *src;
+    JSON_Value     *root_json = json_value_init_object();
+    JSON_Object    *root = json_value_get_object(root_json);
 
+    JSON_Value     *ds_json = json_value_init_object();
+    JSON_Object    *ds = json_value_get_object(ds_json);
+
+    json_object_set_value(root, "datasources", ds_json);
     for (size_t i = 0; i < RRD_MAX_SOURCES; i++) {
+        JSON_Value     *src;
         if (plugin->sources[i] == NULL)
             continue;
         src = json_for_source(plugin->sources[i]);
-        json_object_set_value(root, plugin->sources[i]->name, src);
+        json_object_set_value(ds, plugin->sources[i]->name, src);
     }
-    return json;
+    return root_json;
 }
-
 /*
  * initialise the buffer that we update and write out to a file. Once
  * initialised, it is kept up to date by sample().

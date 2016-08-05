@@ -74,6 +74,7 @@ main(int argc, char **argv)
     src[0].owner_uuid = "4cc1f2e0-5405-11e6-8c2f-572fc76ac144";
     src[0].rrd_units = "points";
     src[0].scale = RRD_GAUGE;
+    src[0].type = RRD_INT64;
     src[0].min = "-inf";
     src[0].max = "inf";
     src[0].rrd_default = 1;
@@ -90,6 +91,7 @@ main(int argc, char **argv)
     src[1].owner_uuid = "e8969702-5414-11e6-8cf5-47824be728c3";
     src[1].rrd_units = "points";
     src[1].scale = RRD_GAUGE;
+    src[0].type = RRD_INT64;
     src[1].min = "-inf";
     src[1].max = "inf";
     src[1].rrd_default = 1;
