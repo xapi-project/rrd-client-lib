@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <inttypes.h>
 #include "librrd.h"
 #include "assert.h"
 
@@ -34,7 +35,7 @@ static rrd_value_t v;
 static          rrd_value_t
 sample(void)
 {
-    printf("sample called: %ld\n", v.int64);
+    printf("sample called: %"PRId64"\n", v.int64);
     return v;
 }
 

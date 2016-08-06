@@ -26,9 +26,9 @@
 #include <stdlib.h>
 #include <libgen.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #include "librrd.h"
-
 
 static int64_t  numbers[] =
     { 2, 16, 28, 29, 29, 34, 40, 48, 49, 52, 54, 55, 55, 57, 66, 67, 83,
@@ -48,7 +48,7 @@ sample(void)
 
     v.int64 = numbers[i++ % (sizeof(numbers) / sizeof(numbers[0]))];
 
-    printf("sample called: %ld\n", v.int64);
+    printf("sample called: %"PRId64"\n", v.int64);
     return v;
 }
 
