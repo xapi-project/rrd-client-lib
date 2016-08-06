@@ -53,7 +53,7 @@
  * entirely managed by it.
  */
 
-typedef struct rrd_plugin {
+struct rrd_plugin {
     char           *name;       /* name of the plugin */
     RRD_SOURCE     *sources[RRD_MAX_SOURCES];
     JSON_Value     *meta;       /* meta data for the plugin */
@@ -62,7 +62,7 @@ typedef struct rrd_plugin {
     uint32_t        n;          /* number of used slots */
     size_t          buf_size;   /* size of the buffer */
     int             file;       /* where we report data */
-} RRD_PLUGIN;
+};
 
 
 /*
@@ -165,7 +165,7 @@ json_for_source(RRD_SOURCE * source)
 }
 /*
  * Generate JSON for a plugin. This is just a JSON object containing a
- * sub-objecy for every data source.
+ * sub-object for every data source.
  */
 static JSON_Value *
 json_for_plugin(RRD_PLUGIN * plugin)
