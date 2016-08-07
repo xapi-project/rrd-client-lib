@@ -243,7 +243,7 @@ initialise(RRD_PLUGIN * plugin)
 
     p64 = (int64_t *) (plugin->buf + sizeof(RRD_HEADER));
     for (size_t i = 0; i < plugin->n; i++) {
-        *p64++ = htonll(0x001122334455667788);
+        *p64++ = htonll(0x0011223344556677);
     }
     p32 = (int32_t *) p64;
     *p32++ = htonl(size_meta);
