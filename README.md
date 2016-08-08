@@ -1,5 +1,5 @@
 
-[![Build Status](https://travis-ci.org/lindig/rrd-client-lib-1.svg?branch=master)](https://travis-ci.org/lindig/rrd-client-lib-1)
+[![Build Status](https://travis-ci.org/xapi-project/rrd-client-lib.svg?branch=master)](https://travis-ci.org/xapi-project/rrd-client-lib)
 
 # rrd-client-lib - A Library to Provide RRD Data
 
