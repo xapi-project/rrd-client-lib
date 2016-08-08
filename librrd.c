@@ -144,17 +144,27 @@ json_for_source(RRD_SOURCE * source)
     }
     json_object_set_string(src, "value_type", value_type);
 
+#define RRD_TRANSPORT_1_0_0
+#ifdef RRD_TRANSPORT_1_1_0
+#define GAUGE "gauge"
+#define ABSOLUTE "absolute"
+#define DERIVE "derive"
+#else
+#define GAUGE "absolute"
+#define ABSOLUTE "rate"
+#define DERIVE "absolute_to_rate"
+#endif
 
     char           *scale = NULL;
     switch (source->scale) {
     case RRD_GAUGE:
-        scale = "gauge";
+        scale = GAUGE;
         break;
     case RRD_ABSOLUTE:
-        scale = "absolute";
+        scale = ABSOLUTE;
         break;
     case RRD_DERIVE:
-        scale = "derive";
+        scale = DERIVE;
         break;
     default:
         abort();
