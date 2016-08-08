@@ -29,9 +29,12 @@ clean:
 	cd ocaml;  $(OCB) -clean
 
 .PHONY: test
-test: 	rrdtest rrdclient rrdreader
+test: 	rrdtest rrdclient
 	./rrdtest
 	seq 1 10 | ./rrdclient rrdclient.rrd
+
+.PHONY: test-integration
+test-integration: rrdreader
 	seq 1 10 | while read i; do \
 		echo $$i | ./rrdclient rrdclient.rrd ;\
 		./ocaml/rrdreader.native rrdclient.rrd ;\
