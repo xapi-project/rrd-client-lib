@@ -38,7 +38,7 @@ test: 	rrdtest rrdclient
 	seq 1 10 | ./rrdclient rrdclient.rrd
 
 .PHONY: test-integration
-test-integration: 
+test-integration: rrdclient
 	seq 1 10 | while read i; do \
 		echo $$i | ./rrdclient rrdclient.rrd ;\
 		rrdreader file --once rrdclient.rrd v2 ;\
@@ -79,7 +79,7 @@ rrdclient: rrdclient.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
 
 .PHONY: tar
-tar: 	
+tar:
 	git archive --format=tar --prefix=$(NAME)-$(VERSION)/  HEAD\
 		| gzip > $(NAME)-$(VERSION).tar.gz
 
