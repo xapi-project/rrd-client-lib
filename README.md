@@ -19,7 +19,6 @@ The `Makefile` builds the library and a simple test. The implementation
 relies on a small JSON library that is included as a Git submodule. This
 needs to be initialised:
 
-    make parson
     make
     
     make test
@@ -28,9 +27,7 @@ needs to be initialised:
 ## Parson
 
 The JSON library [Parson](https://github.com/kgabis/parson.git) is
-included as a Git submodule. A submodule points to a specific commit in
-an external repository and does not track its master branch as this
-advances. Instead, it needs to be updated explicitly.
+included as a copy of the source code.
 
 ## Documentation - Overview
 
