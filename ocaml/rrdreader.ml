@@ -25,6 +25,15 @@
 
 open Rrd_protocol
 
+exception Error of string
+let error fmt  = Printf.kprintf (fun msg -> raise (Error msg)) fmt
+
+let finally opn cls =
+  let res = try opn () with exn -> cls (); raise exn
+  in
+    cls ();
+    res
+
 let string_of_data_source owner ds =
 	let owner_string = match owner with
 	| Rrd.Host -> "Host"
@@ -58,15 +67,34 @@ let print payload =
 let read path =
 	let v2 = Rrd_protocol_v2.protocol in
 	let reader = Rrd_reader.FileReader.create path v2 in
-	reader.Rrd_reader.read_payload ()
-	|> print
+	finally
+		(fun () ->
+			reader.Rrd_reader.read_payload ()
+			|> print)
+		(fun () ->
+			reader.Rrd_reader.cleanup ())
+
+let read_loop seconds path =
+	let v2 = Rrd_protocol_v2.protocol in
+	let reader = Rrd_reader.FileReader.create path v2 in
+	let rec loop () =
+		( reader.Rrd_reader.read_payload () |> print
+		; Unix.sleep seconds
+		; loop ()
+		) in
+	finally loop reader.Rrd_reader.cleanup
+
+let atoi str =
+	try int_of_string str with Failure _ -> error "not an int: %s" str
 
 let main () =
-	let args = Array.to_list Sys.argv in
-	let this = Sys.executable_name in
+	let args   = Array.to_list Sys.argv in
+	let this   = Sys.executable_name in
+	let printf = Printf.printf in
 		match args with
-		| [_;path]    -> read path; exit 0
-		| _           -> Printf.printf "usage: %s file.rrd\n" this; exit 1
+		| [_;path]        -> read path; exit 0
+		| [_;"-l";s;path] -> read_loop (atoi s) path
+		| _               -> printf "usage: [-l secs] %s file.rrd\n" this; exit 1
 
 let () = main ()
 

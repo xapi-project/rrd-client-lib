@@ -1,5 +1,9 @@
 # vim: set ts=8 sw=8 noet:
 #
+# To run the tests you need OCaml and the ocaml-rrd-transport-devel
+# package:
+#
+# yum install -y ocaml-rrd-transport-devel
 #
 
 CC	= gcc
@@ -25,12 +29,18 @@ clean:
 	cd ocaml;  $(OCB) -clean
 
 .PHONY: test
-test: 	rrdtest rrdclient
+test: 	rrdtest rrdclient rrdreader
 	./rrdtest
 	seq 1 10 | ./rrdclient rrdclient.rrd
-	seq 1 10 \
-		| while read i; do echo $$i; sleep 1; done \
-		| ./rrdclient rrdclient.rrd
+	seq 1 10 | while read i; do \
+		echo $$i | ./rrdclient rrdclient.rrd ;\
+		./ocaml/rrdreader.native rrdclient.rrd ;\
+	done
+	seq 1 20 | while read i; do \
+		echo $$i | ./rrdclient rrdclient.rrd ;\
+		sleep 1 ;\
+	done & ./ocaml/rrdreader.native -l 2 rrdclient.rrd \
+	|| echo "a final exception Rrd_protocol.No_update is OK"
 
 .PHONY: valgrind
 valgrind: rrdtest
@@ -94,6 +104,7 @@ librrd.o: 		parson/parson.h librrd.h
 # OCaml test utility
 # You need: yum install -y ocaml-rrd-transport-devel
 
+.PHONY: rrdreader
 rrdreader:
-	cd ocaml; $(OCB) -pkg rrd-transport -tag thread rrdreader.native
+	cd ocaml; $(OCB) -pkgs rrd-transport,unix -tag thread rrdreader.native
 

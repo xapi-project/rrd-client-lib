@@ -10,5 +10,4 @@ matrix:
 script:
   - make parson
   - make
-  - make test
 
