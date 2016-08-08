@@ -29,10 +29,9 @@ exception Error of string
 let error fmt  = Printf.kprintf (fun msg -> raise (Error msg)) fmt
 
 let finally opn cls =
-  let res = try opn () with exn -> cls (); raise exn
-  in
-    cls ();
-    res
+	let res = try opn () with exn -> cls (); raise exn in
+	cls ();
+	res
 
 let string_of_data_source owner ds =
 	let owner_string = match owner with
