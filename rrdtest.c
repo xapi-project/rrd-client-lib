@@ -82,7 +82,7 @@ main(int argc, char **argv)
 
     printf("adding source: %s\n", src[0].name);
     rrd_add_src(plugin, &src[0]);
-    rc = rrd_sample(plugin);
+    rc = rrd_sample(plugin, NULL);
     assert(rc == RRD_OK);
 
     src[1].name = "second";
@@ -99,12 +99,12 @@ main(int argc, char **argv)
 
     printf("adding source: %s\n", src[1].name);
     rrd_add_src(plugin, &src[1]);
-    rc = rrd_sample(plugin);
+    rc = rrd_sample(plugin, NULL);
     assert(rc == RRD_OK);
 
     printf("removing source: %s\n", src[0].name);
     rrd_del_src(plugin, &src[0]);
-    rc = rrd_sample(plugin);
+    rc = rrd_sample(plugin, NULL);
     assert(rc == RRD_OK);
 
     printf("removing source: %s\n", src[1].name);

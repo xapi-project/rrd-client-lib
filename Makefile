@@ -55,12 +55,6 @@ indent: librrd.h librrd.c rrdtest.c
 depend: librrd.c rrdtest.c
 	$(CC) -MM $^
 
-.PHONY: parson
-parson:
-	# git submodule add https://github.com/kgabis/parson.git
-	git submodule init
-	git submodule update
-
 %.o:	%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 

@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <zlib.h>
-#include <time.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -400,7 +399,7 @@ write_exact(int fd, const void *data, size_t size)
  * first.
  */
 int
-rrd_sample(RRD_PLUGIN * plugin)
+rrd_sample(RRD_PLUGIN * plugin, time_t (*t)(time_t*))
 {
     assert(plugin);
     JSON_Value     *json;
@@ -440,7 +439,8 @@ rrd_sample(RRD_PLUGIN * plugin)
     /*
      * update timestamp, calculate crc
      */
-    header->rrd_timestamp = htonll((uint64_t) time(NULL));
+
+    header->rrd_timestamp = htonll((uint64_t) (t ? t(NULL) : time(NULL)));
     uint32_t        crc = crc32(0L, Z_NULL, 0);
     crc = crc32(crc,
                 (unsigned char *) &header->rrd_timestamp,

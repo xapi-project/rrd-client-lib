@@ -23,6 +23,7 @@
 
 
 #include <stdint.h>
+#include <time.h>
 #include "parson/parson.h"
 
 #define RRD_MAX_SOURCES         128
@@ -124,7 +125,10 @@ int             rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
 
 /*
  * calling rrd_sample(plugin) triggers that all data sources are sampled
- * and the results are reported to the RRD daemon. This function needs to
- * be called every 5 seconds by the client,
+ * and the results are reported to the RRD daemon. This function needs
+ * to be called every 5 seconds by the client. The second parameter is
+ * typically NULL. If it isn't, it will be used instead of time(3) to
+ * obtain the time stamp that is written to the RRD file. This can be
+ * used to create RRD files that don't depend on the current time.
  */
-int             rrd_sample(RRD_PLUGIN * plugin);
+int             rrd_sample(RRD_PLUGIN * plugin, time_t (*t)(time_t*));

@@ -42,7 +42,7 @@ library:
     int             rrd_close(RRD_PLUGIN * plugin);
     int             rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
     int             rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
-    int             rrd_sample(RRD_PLUGIN * plugin);
+    int             rrd_sample(RRD_PLUGIN * plugin, time_t (*t)(time_t*));
 
 A plugin reports streams of data to the RRD service. Each such
 stream is represented as an `RRD_SOURCE` value. An `RRD_PLUGIN`
@@ -83,7 +83,7 @@ All strings are in UTF8 encoding. The library implements the following
 policy to manage memory: it does not free any memory that is hasn't
 itself allocated. This means, if the client passes dynamically allocated
 data into the library, it is the client's responsibility to de-allocate
-it. 
+it.
 
 ## Open, Sample, Close
 
@@ -102,12 +102,14 @@ considered private to the library.
     <<function declarations>>=
     RRD_PLUGIN     *rrd_open(char *name, rrd_domain_t domain, char *path);
     int             rrd_close(RRD_PLUGIN * plugin);
-    int             rrd_sample(RRD_PLUGIN * plugin);
+    int             rrd_sample(RRD_PLUGIN * plugin, time_t (*t)(time_t*));
     
 
 The name of the plugin is descriptive, as whether it reports data
 for a single machine (`RRD_LOCAL_DOMAIN`) or multiple
-(`RRD_INTER_DOMAIN`).
+(`RRD_INTER_DOMAIN`). The second parameter of `rrd_sample` is typically
+NULL. If it isn't, it us used to obtain a timestamp instead of using
+time(3).
 
 ## Data Sources
 
