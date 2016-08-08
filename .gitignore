@@ -1,0 +1,9 @@
+*.[ch]~
+rrdclient
+rrdtest
+ocaml/_build
+ocaml/rrdreader.native
+*.o
+*.a
+*.rrd
+

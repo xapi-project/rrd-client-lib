@@ -1,4 +1,6 @@
 
+[![Build Status](https://travis-ci.org/lindig/rrd-client-lib-1.svg?branch=master)](https://travis-ci.org/lindig/rrd-client-lib-1)
+
 # rrd-client-lib - A Library to Provide RRD Data
 
 The RRD service is a system-level service that aggregates
@@ -19,14 +21,15 @@ needs to be initialised:
 
     make parson
     make
-
+    
+    make test
     ./rrdtest
 
 ## Parson
 
-The [Parson](https://github.com/kgabis/parson.git) library is included
-as a Git submodule. A submodule points to a specific commit in an
-external repository and does not track its master branch as this
+The JSON library [Parson](https://github.com/kgabis/parson.git) is
+included as a Git submodule. A submodule points to a specific commit in
+an external repository and does not track its master branch as this
 advances. Instead, it needs to be updated explicitly.
 
 ## Documentation - Overview
@@ -34,11 +37,11 @@ advances. Instead, it needs to be updated explicitly.
 The header file `librrd.h` contains the essential information to use the
 library:
 
-    typedef ...     rrd_value;
+    typedef ...     rrd_value_t;
     typedef ...     RRD_SOURCE;
     typedef ...     RRD_PLUGIN;
 
-    RRD_PLUGIN     *rrd_open(char *name, rrd_domain domain, char *path);
+    RRD_PLUGIN     *rrd_open(char *name, rrd_domain_t domain, char *path);
     int             rrd_close(RRD_PLUGIN * plugin);
     int             rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
     int             rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
@@ -54,6 +57,20 @@ Data is reported to the RRD service when calling `rrd_sample`. This
 samples values from all data sources and writes the data to the `path`
 provided to `rrd_open`. It is the client's responsibility to call
 `rrd_sample` regularly at an interval of 5 seconds.
+
+## Sample Code
+
+See `rrdclient.c` for a simple client that reads integers from standard
+input as a data source and reports them to RRD. Here is how everything
+is compiled and linked:
+
+    gcc -std=gnu99 -g -Wall -c -o librrd.o librrd.c
+    gcc -std=gnu99 -g -Wall -c -o parson/parson.o parson/parson.c
+    ar rc librrd.a librrd.o parson/parson.o
+    ranlib librrd.a
+    gcc -std=gnu99 -g -Wall -c -o rrdclient.o rrdclient.c
+    gcc -std=gnu99 -g -Wall -o rrdclient rrdclient.o librrd.a -lz
+
 
 ## Interface
 
@@ -78,11 +95,15 @@ A plugin opens a file for communication and periodically calls
 considered private to the library.
 
     <<type definitions>>=
-    typedef enum { RRD_LOCAL_DOMAIN = 0, RRD_INTER_DOMAIN } rrd_domain;
+    /* rrd_domain_t */
+    typedef int32_t rrd_domain_t;
+    #define RRD_LOCAL_DOMAIN        0
+    #define RRD_INTER_DOMAIN        1
+    
     
     
     <<function declarations>>=
-    RRD_PLUGIN     *rrd_open(char *name, rrd_domain domain, char *path);
+    RRD_PLUGIN     *rrd_open(char *name, rrd_domain_t domain, char *path);
     int             rrd_close(RRD_PLUGIN * plugin);
     int             rrd_sample(RRD_PLUGIN * plugin);
     
@@ -98,32 +119,44 @@ integer or float values. Data sources can be added and removed
 dynamically.
 
     <<type definitions>>=
-    typedef enum { RRD_GAUGE = 0, RRD_ABSOLUTE, RRD_DERIVE } rrd_scale;
-    typedef enum { RRD_HOST = 0, RRD_VM, RRD_SR } rrd_owner;
-    typedef enum { RRD_FLOAT64 = 0, RRD_INT64 } rrd_type;
+    /* rrd_scale_t */
+    typedef int32_t rrd_scale_t;
+    #define RRD_GAUGE               0
+    #define RRD_ABSOLUTE            1
+    #define RRD_DERIVE              2
+    
+    /* rrd_owner_t */
+    typedef int32_t rrd_owner_t;
+    #define RRD_HOST                0
+    #define RRD_VM                  1
+    #define RRD_SR                  2
+    
+    /* rrd_type_t */
+    typedef int32_t rrd_type_t;
+    #define RRD_FLOAT64             0
+    #define RRD_INT64               1
     
     typedef union {
         int64_t         int64;
-        float           float64;
-    } rrd_value;
+        double          float64;
+    } rrd_value_t;
     
     typedef struct rrd_source {
         char           *name;       /* name of the data source */
         char           *description;        /* for user interface */
-        rrd_owner       owner;
-        int             rrd_default;/* true: rrd daemon will archive */
         char           *owner_uuid; /* UUID of the owner or NULL */
         char           *rrd_units;  /* for user interface */
-        rrd_scale       scale;      /* presentation of value */
-        rrd_type        type;       /* type of value */
         char           *min;        /* min <= sample() <= max */
         char           *max;        /* min <= sample() <= max */
-                        rrd_value(*sample) (void);  /* reads value that gets *
-                                                     * reported */
+                        rrd_value_t(*sample) (void);  /* reads value */
+        rrd_owner_t     owner;
+        int32_t         rrd_default;        /* true: rrd daemon will archive */
+        rrd_scale_t     scale;      /* presentation of value */
+        rrd_type_t      type;       /* type of value */
     } RRD_SOURCE;
     
+    typedef struct rrd_plugin RRD_PLUGIN;
     
-    <<typedef RRD_PLUGIN>>
     
     <<function declarations>>=
     int rrd_add_src(RRD_PLUGIN *plugin, RRD_SOURCE *source);
@@ -135,7 +168,7 @@ reporting. It includes a function (pointer) `sample` that obtains the
 value being reported. A value can be either a 64-bit integer or a 64-bit
 floating point value -- discriminated by `type`.
 
-## Error Handling
+## Constants and Error Handling
 
 Some functions return an error code.
 
@@ -147,26 +180,6 @@ Some functions return an error code.
     #define RRD_NO_SOUCH_SOURCE     2
     #define RRD_FILE_ERROR          3
     #define RRD_ERROR               4
-    
-
-
-## Private Types
-
-    <<constants>>=
-    #define RRD_MAX_SOURCES           128
-    
-    
-    <<typedef RRD_PLUGIN>>=
-    typedef struct rrd_plugin {
-        char           *name;       /* name of the plugin */
-        int             file;       /* where we report data */
-        rrd_domain      domain;     /* domain of this plugin */
-        RRD_SOURCE     *sources[RRD_MAX_SOURCES];
-        uint32_t        n;          /* number of used slots */
-        JSON_Value     *meta;       /* meta data for the plugin */
-        char           *buf;        /* buffer where we keep protocol data */
-        size_t          buf_size;   /* size of the buffer */
-    } RRD_PLUGIN;
     
 
 ## Design
