@@ -1,6 +1,6 @@
 # vim: set ts=8 sw=8 noet:
 #
-# To run the tests you need OCaml and the ocaml-rrd-transport-devel
+# To run the integration tests you need the ocaml-rrd-transport-devel
 # package:
 #
 # yum install -y ocaml-rrd-transport-devel
@@ -34,15 +34,15 @@ test: 	rrdtest rrdclient
 	seq 1 10 | ./rrdclient rrdclient.rrd
 
 .PHONY: test-integration
-test-integration: rrdreader
+test-integration: 
 	seq 1 10 | while read i; do \
 		echo $$i | ./rrdclient rrdclient.rrd ;\
-		./ocaml/rrdreader.native rrdclient.rrd ;\
+		rrdreader file --once rrdclient.rrd v2 ;\
 	done
 	seq 1 20 | while read i; do \
 		echo $$i | ./rrdclient rrdclient.rrd ;\
-		sleep 1 ;\
-	done & ./ocaml/rrdreader.native -l 2 rrdclient.rrd \
+		sleep 4 ;\
+	done &  rrdreader file rrdclient.rrd v2 \
 	|| echo "a final exception Rrd_protocol.No_update is OK"
 
 .PHONY: valgrind
@@ -97,11 +97,4 @@ parson/parson.c: 	parson
 parson/parson.o: 	parson/parson.h
 rrdtest.o: 		parson/parson.h librrd.h
 librrd.o: 		parson/parson.h librrd.h
-
-# OCaml test utility
-# You need: yum install -y ocaml-rrd-transport-devel
-
-.PHONY: rrdreader
-rrdreader:
-	cd ocaml; $(OCB) -pkgs rrd-transport,unix -tag thread rrdreader.native
 
