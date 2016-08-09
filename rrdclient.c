@@ -73,7 +73,7 @@ main(int argc, char **argv)
     int rc;
     while (fgets(line, sizeof(line), stdin) != NULL) {
         v.int64 = (int64_t) atol(line);
-        rc = rrd_sample(plugin);
+        rc = rrd_sample(plugin, NULL);
         assert(rc == RRD_OK);
     }
 

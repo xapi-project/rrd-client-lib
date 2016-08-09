@@ -8,7 +8,6 @@ matrix:
       os: linux
 
 script:
-  - make parson
   - make
   - make test
 

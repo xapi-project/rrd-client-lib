@@ -1,5 +1,5 @@
 
-[![Build Status](https://travis-ci.org/lindig/rrd-client-lib-1.svg?branch=master)](https://travis-ci.org/lindig/rrd-client-lib-1)
+[![Build Status](https://travis-ci.org/xapi-project/rrd-client-lib.svg?branch=master)](https://travis-ci.org/xapi-project/rrd-client-lib)
 
 # rrd-client-lib - A Library to Provide RRD Data
 
@@ -19,7 +19,6 @@ The `Makefile` builds the library and a simple test. The implementation
 relies on a small JSON library that is included as a Git submodule. This
 needs to be initialised:
 
-    make parson
     make
     
     make test
@@ -28,9 +27,7 @@ needs to be initialised:
 ## Parson
 
 The JSON library [Parson](https://github.com/kgabis/parson.git) is
-included as a Git submodule. A submodule points to a specific commit in
-an external repository and does not track its master branch as this
-advances. Instead, it needs to be updated explicitly.
+included as a copy of the source code.
 
 ## Documentation - Overview
 
@@ -45,7 +42,7 @@ library:
     int             rrd_close(RRD_PLUGIN * plugin);
     int             rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
     int             rrd_del_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
-    int             rrd_sample(RRD_PLUGIN * plugin);
+    int             rrd_sample(RRD_PLUGIN * plugin, time_t (*t)(time_t*));
 
 A plugin reports streams of data to the RRD service. Each such
 stream is represented as an `RRD_SOURCE` value. An `RRD_PLUGIN`
@@ -86,7 +83,7 @@ All strings are in UTF8 encoding. The library implements the following
 policy to manage memory: it does not free any memory that is hasn't
 itself allocated. This means, if the client passes dynamically allocated
 data into the library, it is the client's responsibility to de-allocate
-it. 
+it.
 
 ## Open, Sample, Close
 
@@ -105,12 +102,14 @@ considered private to the library.
     <<function declarations>>=
     RRD_PLUGIN     *rrd_open(char *name, rrd_domain_t domain, char *path);
     int             rrd_close(RRD_PLUGIN * plugin);
-    int             rrd_sample(RRD_PLUGIN * plugin);
+    int             rrd_sample(RRD_PLUGIN * plugin, time_t (*t)(time_t*));
     
 
 The name of the plugin is descriptive, as whether it reports data
 for a single machine (`RRD_LOCAL_DOMAIN`) or multiple
-(`RRD_INTER_DOMAIN`).
+(`RRD_INTER_DOMAIN`). The second parameter of `rrd_sample` is typically
+NULL. If it isn't, it us used to obtain a timestamp instead of using
+time(3).
 
 ## Data Sources
 
