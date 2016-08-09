@@ -5,17 +5,22 @@
 #
 # yum install -y ocaml-rrd-transport-devel
 #
+# We don't have an install target because installation is handled
+# from the spec file.
+
+
+NAME    = rrd-client-lib
+VERSION = 1.0.0
 
 CC	= gcc
-CFLAGS	= -std=gnu99 -g -Wall
+CFLAGS	= -std=gnu99 -g -fpic -Wall
 OBJ	+= librrd.o
 OBJ 	+= parson/parson.o
 LIB     += -lz
 
-OCB 	= ocamlbuild -use-ocamlfind
 
 .PHONY: all
-all:	librrd.a rrdtest rrdclient
+all:	librrd.a librrd.so rrdtest rrdclient
 
 .PHONY: clean
 clean:
@@ -26,7 +31,6 @@ clean:
 	rm -f rrdtest.o rrdtest
 	rm -f rrdclient.o rrdclient
 	rm -rf config.xml cov-int html coverity.out
-	cd ocaml;  $(OCB) -clean
 
 .PHONY: test
 test: 	rrdtest rrdclient
@@ -65,11 +69,19 @@ librrd.a: $(OBJ)
 	ar rc $@ $(OBJ)
 	ranlib $@
 
+librrd.so: $(OBJ)
+	$(CC) -shared -o $@ $(OBJ)
+
 rrdtest: rrdtest.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
 
 rrdclient: rrdclient.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
+
+.PHONY: tar
+tar: 	
+	git archive --format=tar --prefix=$(NAME)-$(VERSION)/  HEAD\
+		| gzip > $(NAME)-$(VERSION).tar.gz
 
 # coverity analysis
 
