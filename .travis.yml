@@ -1,13 +1,10 @@
 
+os:
+- linux
+sudo: required
 language: c
-sudo: false
-
-matrix:
-  include:
-    - compiler: gcc
-      os: linux
+services:
+- docker
 
 script:
-  - make
-  - make test
-
+  - docker run -itv $PWD:/mnt xenserver/xenserver-build-env bash -c "cd /mnt; ./travis-ci.sh"
