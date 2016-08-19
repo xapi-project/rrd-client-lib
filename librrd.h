@@ -26,7 +26,7 @@
 #include <time.h>
 #include "parson/parson.h"
 
-#define RRD_MAX_SOURCES         128
+#define RRD_MAX_SOURCES         16
 
 #define RRD_OK                  0
 #define RRD_TOO_MANY_SOURCES    1
@@ -69,7 +69,9 @@ typedef union {
 /*
  * An RRD_SOURCE describes the value being reported and contains a
  * sample() function to obtain such values. Strings are expected
- * to be in UTF8 encoding.
+ * to be in UTF8 encoding. Part of an RRD_SOURCE is a pointer userdata
+ * that is passed to sample(). This allows to share a single sample
+ * function across several RRD_SOURCE values.
  */
 typedef struct rrd_source {
     char           *name;       /* name of the data source */
@@ -78,13 +80,14 @@ typedef struct rrd_source {
     char           *rrd_units;  /* for user interface */
     char           *min;        /* min <= sample() <= max */
     char           *max;        /* min <= sample() <= max */
-                    rrd_value_t(*sample) (void);  /* reads value */
+                    rrd_value_t(*sample) (void *userdata);      /* reads
+                                                                 * value */
+    void           *userdata;   /* passed to sample() */
     rrd_owner_t     owner;
     int32_t         rrd_default;        /* true: rrd daemon will archive */
     rrd_scale_t     scale;      /* presentation of value */
     rrd_type_t      type;       /* type of value */
 } RRD_SOURCE;
-
 typedef struct rrd_plugin RRD_PLUGIN;
 
 /*
@@ -95,7 +98,7 @@ typedef struct rrd_plugin RRD_PLUGIN;
  */
 
 /*
- * rrd_open - regsiter a new plugin
+ * rrd_open - register a new plugin
  * name: name of the plugin in UTF8 encoding.
  * domain: INTER_DOMAIN if it reports data from multiple domains
  * path: file path where the plugin writes it samples
@@ -115,6 +118,8 @@ int             rrd_close(RRD_PLUGIN * plugin);
  * RRD_MAX_SOURCES can be active. It is an unchecked error to register the
  * same source multiple times. The name of the source must be unique for
  * all sources added to a plugin.
+ *
+ *
  */
 int             rrd_add_src(RRD_PLUGIN * plugin, RRD_SOURCE * source);
 

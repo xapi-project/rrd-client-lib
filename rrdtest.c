@@ -41,14 +41,15 @@ static int64_t  numbers[] =
  */
 
 static          rrd_value_t
-sample(void)
+sample(void *userdata)
 {
     rrd_value_t     v;
     static size_t   i = 0;
+    RRD_SOURCE      *src = (RRD_SOURCE*) userdata;
 
     v.int64 = numbers[i++ % (sizeof(numbers) / sizeof(numbers[0]))];
 
-    printf("sample called: %"PRId64"\n", v.int64);
+    printf("sample called: %"PRId64" from %s\n", v.int64, src->name);
     return v;
 }
 
@@ -79,6 +80,7 @@ main(int argc, char **argv)
     src[0].max = "inf";
     src[0].rrd_default = 1;
     src[0].sample = sample;
+    src[0].userdata = &src[0];
 
     printf("adding source: %s\n", src[0].name);
     rrd_add_src(plugin, &src[0]);
@@ -96,6 +98,7 @@ main(int argc, char **argv)
     src[1].max = "inf";
     src[1].rrd_default = 1;
     src[1].sample = sample;
+    src[1].userdata = &src[1];
 
     printf("adding source: %s\n", src[1].name);
     rrd_add_src(plugin, &src[1]);
