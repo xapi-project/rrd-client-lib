@@ -6,4 +6,5 @@ ocaml/rrdreader.native
 *.o
 *.a
 *.rrd
+*.so
 

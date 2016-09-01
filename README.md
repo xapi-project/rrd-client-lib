@@ -111,6 +111,9 @@ for a single machine (`RRD_LOCAL_DOMAIN`) or multiple
 NULL. If it isn't, it us used to obtain a timestamp instead of using
 time(3).
 
+When a plugin is opened, the file at `path` is being created and it is
+removed when the plugin is closed.
+
 ## Data Sources
 
 A typical client has several data sources. A data source either reports
@@ -139,7 +142,7 @@ dynamically.
         int64_t         int64;
         double          float64;
     } rrd_value_t;
-    
+
     typedef struct rrd_source {
         char           *name;       /* name of the data source */
         char           *description;        /* for user interface */
@@ -147,15 +150,15 @@ dynamically.
         char           *rrd_units;  /* for user interface */
         char           *min;        /* min <= sample() <= max */
         char           *max;        /* min <= sample() <= max */
-                        rrd_value_t(*sample) (void);  /* reads value */
+                        rrd_value_t(*sample) (void *userdata);      /* reads
+                                                                     * value */
+        void           *userdata;   /* passed to sample() */
         rrd_owner_t     owner;
         int32_t         rrd_default;        /* true: rrd daemon will archive */
         rrd_scale_t     scale;      /* presentation of value */
         rrd_type_t      type;       /* type of value */
     } RRD_SOURCE;
-    
     typedef struct rrd_plugin RRD_PLUGIN;
-    
     
     <<function declarations>>=
     int rrd_add_src(RRD_PLUGIN *plugin, RRD_SOURCE *source);
@@ -165,14 +168,16 @@ dynamically.
 An `RRD_SOURCE` has several descriptive fields for the value it is
 reporting. It includes a function (pointer) `sample` that obtains the
 value being reported. A value can be either a 64-bit integer or a 64-bit
-floating point value -- discriminated by `type`.
+floating point value -- discriminated by `type`.  Part of an RRD_SOURCE
+is a pointer `userdata` that is passed to `sample()`. This allows to
+share a single sample function across several RRD_SOURCE values.
 
 ## Constants and Error Handling
 
 Some functions return an error code.
 
     <<constants>>=
-    #define RRD_MAX_SOURCES         128
+    #define RRD_MAX_SOURCES         16
     
     #define RRD_OK                  0
     #define RRD_TOO_MANY_SOURCES    1
@@ -190,6 +195,20 @@ added nor removed, the meta data doesn't change and only the binary data
 is updated. When a data source is added or removed, the existing buffer
 containing binary and meta data is invalidated, recomputed and gets
 written out.
+
+The design in constrained by the following behavior of the RRD daemon
+RRDD:
+
+* RRDD maps an RRD file into memory and does not re-read it if the
+  file size changes. Therefore the library writes a static size that
+  depends on `RRD_MAX_SOURCES` and not on the actual number of data
+  sources being in use.
+
+* RRDD reads an RRD file and expects it have valid content. Hence, the
+  library can't open the file and write it contents with a delay.
+  Therefore the library writes an RRD file that indicated that initially
+  there are no data sources and re-writes the file for each data source
+  that is added. Checksums avoid other synchronisation problems.
 
 # Data Layout
 

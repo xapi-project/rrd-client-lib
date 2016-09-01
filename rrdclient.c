@@ -28,28 +28,47 @@
 #include <inttypes.h>
 #include "librrd.h"
 #include "assert.h"
+#include <signal.h>
 
 static RRD_SOURCE src;
 static rrd_value_t v;
+static RRD_PLUGIN *plugin;
 
 static          rrd_value_t
-sample(void)
+sample(void *userdata)
 {
-    printf("sample called: %"PRId64"\n", v.int64);
+    printf("sample called: %" PRId64 "\n", v.int64);
     return v;
+}
+
+
+static void
+cleanup(int signal)
+{
+    fprintf(stderr, "caught signal %d, cleaning up\n", signal);
+    if (plugin) {
+        rrd_close(plugin);
+    }
+    exit(1);
 }
 
 
 int
 main(int argc, char **argv)
 {
-    RRD_PLUGIN     *plugin;
     char            line[256];
+    struct sigaction sigact;
+    plugin = NULL;
 
     if (argc != 2) {
         fprintf(stderr, "usage: %s file.rrd\n", basename(argv[0]));
         exit(1);
     }
+
+    sigact.sa_handler = cleanup;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = 0;
+    sigaction(SIGINT, &sigact, (struct sigaction *) NULL);
 
     plugin = rrd_open(argv[0], RRD_LOCAL_DOMAIN, argv[1]);
     if (!plugin) {
@@ -69,8 +88,9 @@ main(int argc, char **argv)
     src.max = "inf";
     src.rrd_default = 0;
     src.sample = sample;
+    src.userdata = NULL;
 
-    int rc;
+    int             rc;
     while (fgets(line, sizeof(line), stdin) != NULL) {
         v.int64 = (int64_t) atol(line);
         rc = rrd_sample(plugin, NULL);
