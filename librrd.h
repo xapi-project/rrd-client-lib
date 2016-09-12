@@ -24,7 +24,6 @@
 
 #include <stdint.h>
 #include <time.h>
-#include "parson/parson.h"
 
 #define RRD_MAX_SOURCES         16
 
