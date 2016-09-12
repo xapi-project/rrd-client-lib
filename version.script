@@ -1,0 +1,10 @@
+{
+    global:
+        rrd_open;
+        rrd_close;
+        rrd_add_src;
+        rrd_del_src;
+        rrd_sample;
+    local:
+        *;
+};

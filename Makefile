@@ -67,7 +67,7 @@ librrd.a: $(OBJ)
 	ranlib $@
 
 librrd.so: $(OBJ)
-	$(CC) -shared -o $@ $(OBJ) $(LIB)
+	$(CC) -shared -Wl,--version-script=version.script -o $@ $(OBJ) $(LIB)
 
 rrdtest: rrdtest.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
