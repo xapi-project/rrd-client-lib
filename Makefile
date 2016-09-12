@@ -27,6 +27,7 @@ clean:
 	rm -f $(OBJ)
 	rm -f librrd.a
 	rm -f librrd.o
+	rm -f librrd.so
 	rm -f parson/parson.o
 	rm -f rrdtest.o rrdtest
 	rm -f rrdclient.o rrdclient
