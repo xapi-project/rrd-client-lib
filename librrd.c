@@ -163,7 +163,7 @@ json_for_source(RRD_SOURCE * source)
     }
     json_object_set_string(src, "value_type", value_type);
 
-#define RRD_TRANSPORT_1_0_0
+#define RRD_TRANSPORT_1_1_0
 #ifdef RRD_TRANSPORT_1_1_0
 #define GAUGE "gauge"
 #define ABSOLUTE "absolute"
