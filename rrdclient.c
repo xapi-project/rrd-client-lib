@@ -83,7 +83,7 @@ main(int argc, char **argv)
     src.owner_uuid = "931388d6-559e-11e6-ab0a-73658ca1c515";
     src.rrd_units = "numbers";
     src.type = RRD_INT64;
-    src.scale = RRD_GAUGE;
+    src.scale = RRD_ABSOLUTE;
     src.min = "-inf";
     src.max = "inf";
     src.rrd_default = 0;
