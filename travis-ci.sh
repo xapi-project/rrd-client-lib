@@ -15,3 +15,4 @@ make
 make valgrind
 make test
 make test-integration
+make clean

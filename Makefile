@@ -11,6 +11,7 @@
 
 NAME    = rrd-client-lib
 VERSION = 1.1.0
+OS 	:= $(shell uname)
 
 CC	= gcc
 CFLAGS	= -std=gnu99 -g -fpic -Wall
@@ -18,6 +19,11 @@ OBJ	+= librrd.o
 OBJ 	+= parson/parson.o
 LIB     += -lz
 
+ifeq ($(OS),Darwin)
+LDFLAGS = -shared -Wl
+else
+LDFLAGS = -shared -Wl,--version-script=version.script
+endif
 
 .PHONY: all
 all:	librrd.a librrd.so rrdtest rrdclient
@@ -68,7 +74,7 @@ librrd.a: $(OBJ)
 	ranlib $@
 
 librrd.so: $(OBJ)
-	$(CC) -shared -Wl,--version-script=version.script -o $@ $(OBJ) $(LIB)
+	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LIB)
 
 rrdtest: rrdtest.o librrd.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
