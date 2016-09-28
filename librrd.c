@@ -134,7 +134,7 @@ json_for_source(RRD_SOURCE * source)
     json_object_set_string(src, "default",
                            source->rrd_default ? "true" : "false");
 
-    char           owner[128];
+    char           owner[128] = {0};
 
     switch (source->owner) {
     case RRD_HOST:
