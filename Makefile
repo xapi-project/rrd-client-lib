@@ -49,6 +49,7 @@ test: 	rrdtest rrdclient
 test-integration: rrdclient
 	seq 1 10 | while read i; do echo $$i ; sleep 4; done \
 		| ./rrdclient rrdclient.rrd &
+	sleep 2
 	rrdreader file rrdclient.rrd v2 \
 		|| echo "a final exception Rrd_protocol.No_update is OK"
 	test ! -f rrdclient.rrd
