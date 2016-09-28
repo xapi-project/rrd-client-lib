@@ -79,7 +79,7 @@ main(int argc, char **argv)
 
     src.name = "stdin";
     src.description = "integers read from stdin";
-    src.owner = RRD_HOST;
+    src.owner = RRD_VM;
     src.owner_uuid = "931388d6-559e-11e6-ab0a-73658ca1c515";
     src.rrd_units = "numbers";
     src.type = RRD_INT64;

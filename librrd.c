@@ -134,16 +134,17 @@ json_for_source(RRD_SOURCE * source)
     json_object_set_string(src, "default",
                            source->rrd_default ? "true" : "false");
 
-    char           *owner = NULL;
+    char           owner[128] = {0};
+
     switch (source->owner) {
     case RRD_HOST:
-        owner = "host";
+        snprintf(owner, sizeof owner, "host");
         break;
     case RRD_VM:
-        owner = "vm";
+        snprintf(owner, sizeof owner, "vm %s", source->owner_uuid);
         break;
     case RRD_SR:
-        owner = "rrd";
+        snprintf(owner, sizeof owner, "sr %s", source->owner_uuid);
         break;
     default:
         abort();
