@@ -1,6 +1,6 @@
 /*
  Parson ( http://kgabis.github.com/parson/ )
- Copyright (c) 2012 - 2016 Krzysztof Gabis
+ Copyright (c) 2012 - 2017 Krzysztof Gabis
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 #include <string.h>
 #include <math.h>
 
-#define TEST(A) printf("%-72s-",#A);\
+#define TEST(A) printf("%d %-72s-", __LINE__, #A);\
                 if(A){puts(" OK");tests_passed++;}\
                 else{puts(" FAIL");tests_failed++;}
 #define STREQ(A, B) ((A) && (B) ? strcmp((A), (B)) == 0 : 0)
@@ -53,6 +53,10 @@ void print_commits_info(const char *username, const char *repo);
 void persistence_example(void);
 void serialization_example(void);
 
+static int malloc_count;
+static void *counted_malloc(size_t size);
+static void counted_free(void *ptr);
+
 static char * read_file(const char * filename);
 
 static int tests_passed;
@@ -63,7 +67,7 @@ int main() {
     /* print_commits_info("torvalds", "linux"); */
     /* serialization_example(); */
     /* persistence_example(); */
-
+    json_set_allocation_functions(counted_malloc, counted_free);
     test_suite_1();
     test_suite_2_no_comments();
     test_suite_2_with_comments();
@@ -86,9 +90,7 @@ void test_suite_1(void) {
     TEST(json_value_equals(json_parse_string(json_serialize_to_string_pretty(val)), val));
     if (val) { json_value_free(val); }
 
-    TEST((val = json_parse_file("tests/test_1_2.txt")) != NULL);
-    TEST(json_value_equals(json_parse_string(json_serialize_to_string(val)), val));
-    TEST(json_value_equals(json_parse_string(json_serialize_to_string_pretty(val)), val));
+    TEST((val = json_parse_file("tests/test_1_2.txt")) == NULL); /* Over 2048 levels of nesting */
     if (val) { json_value_free(val); }
 
     TEST((val = json_parse_file("tests/test_1_3.txt")) != NULL);
@@ -101,9 +103,7 @@ void test_suite_1(void) {
     TEST(json_value_equals(json_parse_string(json_serialize_to_string_pretty(val)), val));
     if (val) { json_value_free(val); }
 
-    TEST((val = json_parse_file_with_comments("tests/test_1_2.txt")) != NULL);
-    TEST(json_value_equals(json_parse_string(json_serialize_to_string(val)), val));
-    TEST(json_value_equals(json_parse_string(json_serialize_to_string_pretty(val)), val));
+    TEST((val = json_parse_file_with_comments("tests/test_1_2.txt")) == NULL); /* Over 2048 levels of nesting */
     if (val) { json_value_free(val); }
 
     TEST((val = json_parse_file_with_comments("tests/test_1_3.txt")) != NULL);
@@ -115,6 +115,7 @@ void test_suite_1(void) {
 void test_suite_2(JSON_Value *root_value) {
     JSON_Object *root_object;
     JSON_Array *array;
+    JSON_Value *array_value;
     size_t i;
     TEST(root_value);
     TEST(json_value_get_type(root_value) == JSONObject);
@@ -207,7 +208,13 @@ void test_suite_2(JSON_Value *root_value) {
 
     TEST(json_object_get_object(root_object, "empty object") != NULL);
     TEST(json_object_get_array(root_object, "empty array") != NULL);
-
+    
+    TEST(json_object_get_wrapping_value(root_object) == root_value);
+    array = json_object_get_array(root_object, "string array");
+    array_value = json_object_get_value(root_object, "string array");
+    TEST(json_array_get_wrapping_value(array) == array_value);
+    TEST(json_value_get_parent(array_value) == root_value);
+    TEST(json_value_get_parent(root_value) == NULL);
 }
 
 void test_suite_2_no_comments(void) {
@@ -231,8 +238,6 @@ void test_suite_2_with_comments(void) {
 }
 
 void test_suite_3(void) {
-    char nested_20x[] = "[[[[[[[[[[[[[[[[[[[[\"hi\"]]]]]]]]]]]]]]]]]]]]";
-
     puts("Testing valid strings:");
     TEST(json_parse_string("{\"lorem\":\"ipsum\"}") != NULL);
     TEST(json_parse_string("[\"lorem\"]") != NULL);
@@ -243,6 +248,7 @@ void test_suite_3(void) {
     TEST(json_parse_string("123") != NULL);
 
     puts("Testing invalid strings:");
+    malloc_count = 0;
     TEST(json_parse_string(NULL) == NULL);
     TEST(json_parse_string("") == NULL); /* empty string */
     TEST(json_parse_string("[\"lorem\",]") == NULL);
@@ -262,6 +268,8 @@ void test_suite_3(void) {
     TEST(json_parse_string("x") == NULL);
     TEST(json_parse_string("{:\"no name\"}") == NULL);
     TEST(json_parse_string("[,\"no first value\"]") == NULL);
+    TEST(json_parse_string("{\"key\"\"value\"}") == NULL);
+    TEST(json_parse_string("{\"a\"}") == NULL);
     TEST(json_parse_string("[\"\\u00zz\"]") == NULL); /* invalid utf value */
     TEST(json_parse_string("[\"\\u00\"]") == NULL); /* invalid utf value */
     TEST(json_parse_string("[\"\\u\"]") == NULL); /* invalid utf value */
@@ -274,7 +282,6 @@ void test_suite_3(void) {
     TEST(json_parse_string("[\"\n\"]") == NULL); /* control character */
     TEST(json_parse_string("[\"\f\"]") == NULL); /* control character */
     TEST(json_parse_string("[\"\r\"]") == NULL); /* control character */
-    TEST(json_parse_string(nested_20x) == NULL); /* too deep */
     TEST(json_parse_string("[0x2]") == NULL);    /* hex */
     TEST(json_parse_string("[0X2]") == NULL);    /* HEX */
     TEST(json_parse_string("[07]") == NULL);     /* octals */
@@ -284,6 +291,9 @@ void test_suite_3(void) {
     TEST(json_parse_string("[-007]") == NULL);
     TEST(json_parse_string("[-07.0]") == NULL);
     TEST(json_parse_string("[\"\\uDF67\\uD834\"]") == NULL); /* wrong order surrogate pair */
+    TEST(json_parse_string("[1.7976931348623157e309]") == NULL);
+    TEST(json_parse_string("[-1.7976931348623157e309]") == NULL);
+    TEST(malloc_count == 0);
 }
 
 void test_suite_4() {
@@ -300,9 +310,12 @@ void test_suite_4() {
 void test_suite_5(void) {
     JSON_Value *val_from_file = json_parse_file("tests/test_5.txt");
 
-    JSON_Value *val = NULL;
+    JSON_Value *val = NULL, *val_parent;
     JSON_Object *obj = NULL;
     JSON_Array *interests_arr = NULL;
+
+    JSON_Value *remove_test_val = NULL;
+    JSON_Array *remove_test_arr = NULL;
 
     val = json_value_init_object();
     TEST(val != NULL);
@@ -359,6 +372,18 @@ void test_suite_5(void) {
     TEST(json_array_remove(interests_arr, 0) == JSONSuccess);
     TEST(json_array_remove(interests_arr, 0) == JSONFailure); /* should be empty by now */
 
+    val_parent = json_value_init_null();
+    TEST(json_object_set_value(obj, "x", val_parent) == JSONSuccess);
+    TEST(json_object_set_value(obj, "x", val_parent) == JSONFailure);
+
+    val_parent = json_value_init_null();
+    TEST(json_array_append_value(interests_arr, val_parent) == JSONSuccess);
+    TEST(json_array_append_value(interests_arr, val_parent) == JSONFailure);
+
+    val_parent = json_value_init_null();
+    TEST(json_array_replace_value(interests_arr, 0, val_parent) == JSONSuccess);
+    TEST(json_array_replace_value(interests_arr, 0, val_parent) == JSONFailure);
+    
     TEST(json_object_remove(obj, "interests") == JSONSuccess);
 
     /* UTF-8 tests */
@@ -393,6 +418,16 @@ void test_suite_5(void) {
     TEST(json_object_set_string(obj, "single surrogate 1", "\xed\xa0\x80") == JSONFailure);
     TEST(json_object_set_string(obj, "single surrogate 2", "\xed\xaf\xbf") == JSONFailure);
     TEST(json_object_set_string(obj, "single surrogate 3", "\xed\xbf\xbf") == JSONFailure);
+
+    /* Testing removing values from array, order of the elements should be preserved */
+    remove_test_val = json_parse_string("[1, 2, 3, 4, 5]");
+    remove_test_arr = json_array(remove_test_val);
+    json_array_remove(remove_test_arr, 2);
+    TEST(json_value_equals(remove_test_val, json_parse_string("[1, 2, 4, 5]")));
+    json_array_remove(remove_test_arr, 0);
+    TEST(json_value_equals(remove_test_val, json_parse_string("[2, 4, 5]")));
+    json_array_remove(remove_test_arr, 2);
+    TEST(json_value_equals(remove_test_val, json_parse_string("[2, 4]")));
 }
 
 void test_suite_6(void) {
@@ -569,4 +604,19 @@ static char * read_file(const char * filename) {
     fclose(fp);
     file_contents[file_size] = '\0';
     return file_contents;
+}
+
+static void *counted_malloc(size_t size) {
+    void *res = malloc(size);
+    if (res != NULL) {
+        malloc_count++;
+    }
+    return res;
+}
+
+static void counted_free(void *ptr) {
+    if (ptr != NULL) {
+        malloc_count--;
+    }
+    free(ptr);
 }
