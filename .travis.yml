@@ -1,10 +1,11 @@
-
-os:
-- linux
-sudo: required
 language: c
-services:
-- docker
-
+dist: trusty
+sudo: required
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y zlib1g-dev valgrind
 script:
-  - docker run -itv $PWD:/mnt xenserver/xenserver-build-env bash -c "cd /mnt; ./travis-ci.sh"
+  - make
+  - make test
+  - make valgrind
+  - make clean
