@@ -96,6 +96,7 @@ COV_OPTS += --all
 COV_OPTS += --rule
 COV_OPTS += --disable-parse-warnings
 COV_OPTS += --enable-fnptr
+COV_OPTS += --disable-fb
 
 COV_DIR = cov-int
 
