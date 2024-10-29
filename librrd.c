@@ -218,6 +218,14 @@ json_for_plugin(RRD_PLUGIN * plugin)
     }
     return root_json;
 }
+
+double get_timestamp()
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    return (double) tp.tv_sec + (double) tp.tv_usec / 1e6;
+}
+
 /*
  * initialise the buffer that we update and write out to a file. Once
  * initialised, it is kept up to date by sample().
@@ -263,7 +271,7 @@ initialise(RRD_PLUGIN * plugin)
     memcpy(&header->rrd_magic, MAGIC, MAGIC_SIZE);
     header->rrd_checksum_value = htonl(0x01234567);
     header->rrd_header_datasources = htonl(plugin->n);
-    header->rrd_timestamp = htonll((uint64_t) time(NULL));
+    header->rrd_timestamp = htonll(get_timestamp());
     if (header->rrd_timestamp == -1) {
         free(plugin->buf);
         plugin->buf_size = 0;
@@ -450,7 +458,7 @@ rrd_sample(RRD_PLUGIN * plugin, time_t(*t) (time_t *))
      * update timestamp, calculate crc
      */
 
-    header->rrd_timestamp = htonll((uint64_t) (t ? t(NULL) : time(NULL)));
+    header->rrd_timestamp = htonll(get_timestamp());
     uint32_t        crc = crc32(0L, Z_NULL, 0);
     crc = crc32(crc,
                 (unsigned char *)&header->rrd_timestamp,
