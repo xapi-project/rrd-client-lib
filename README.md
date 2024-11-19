@@ -107,9 +107,8 @@ considered private to the library.
 
 The name of the plugin is descriptive, as whether it reports data
 for a single machine (`RRD_LOCAL_DOMAIN`) or multiple
-(`RRD_INTER_DOMAIN`). The second parameter of `rrd_sample` is typically
-NULL. If it isn't, it us used to obtain a timestamp instead of using
-time(3).
+(`RRD_INTER_DOMAIN`). The second parameter of `rrd_sample` is deprecated
+and will be ignored (and should be NULL).
 
 When a plugin is opened, the file at `path` is being created and it is
 removed when the plugin is closed.
