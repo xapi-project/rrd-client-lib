@@ -226,6 +226,21 @@ double get_timestamp()
     return (double) tp.tv_sec + (double) tp.tv_usec / 1e6;
 }
 
+/**
+ * Returns the IEEE 754 bit pattern of a double as a uint64_t.
+ * The timestamp used in RRD was changed from int to double to increase
+ * precision. In librrd, htonll() is used to convert the timestamp from
+ * little-endian to big-endian. However, htonll() requires an uint64_t
+ * parameter, so we first need to convert the double to an uint64_t in
+ * order to obtain its bit representation as an uint64_t.
+ */
+uint64_t bits_of_double(double d)
+{
+    int64_t i;
+    memcpy(&i, &d, sizeof(d));
+    return i;
+}
+
 /*
  * initialise the buffer that we update and write out to a file. Once
  * initialised, it is kept up to date by sample().
@@ -271,7 +286,7 @@ initialise(RRD_PLUGIN * plugin)
     memcpy(&header->rrd_magic, MAGIC, MAGIC_SIZE);
     header->rrd_checksum_value = htonl(0x01234567);
     header->rrd_header_datasources = htonl(plugin->n);
-    header->rrd_timestamp = htonll(get_timestamp());
+    header->rrd_timestamp = htonll(bits_of_double(get_timestamp()));
     if (header->rrd_timestamp == -1) {
         free(plugin->buf);
         plugin->buf_size = 0;
@@ -458,7 +473,7 @@ rrd_sample(RRD_PLUGIN * plugin, time_t(*t) (time_t *))
      * update timestamp, calculate crc
      */
 
-    header->rrd_timestamp = htonll(get_timestamp());
+    header->rrd_timestamp = htonll(bits_of_double(get_timestamp()));
     uint32_t        crc = crc32(0L, Z_NULL, 0);
     crc = crc32(crc,
                 (unsigned char *)&header->rrd_timestamp,
